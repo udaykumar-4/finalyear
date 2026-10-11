@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Production & Build Artifacts
+dist/
+**/dist/
+build/
+**/build/
+web-build/
+**/web-build/
+
+# Expo & Mobile Build Artifacts
+.expo/
+**/.expo/
+*.apk
+*.aab
+*.ipa
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Recovery Backups
+_backup_frontend/
