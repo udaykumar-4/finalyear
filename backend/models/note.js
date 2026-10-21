@@ -18,4 +18,6 @@ const noteSchema = new Schema({
   }
 }, { timestamps: true }); // 'createdAt' will be the note date
 
+noteSchema.index({ patientId: 1, createdAt: -1 }, { background: true, name: 'idx_notes_patient_created' });
+
 module.exports = mongoose.model('Note', noteSchema);

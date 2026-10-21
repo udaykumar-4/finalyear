@@ -1,6 +1,7 @@
 const recommendationEngine = require('../services/ai/patient-treatment-recommendation');
 const PatientTreatmentRecommendation = require('../models/patientTreatmentRecommendation');
 const AIAuditLog = require('../models/aiAuditLog');
+const cacheService = require('../services/cache/cacheService');
 
 // @desc    Generate isolated educational AI treatment recommendation for patient
 // @route   POST /api/ai/patient-treatment-recommendations
@@ -38,6 +39,9 @@ const generateRecommendation = async (req, res) => {
         disclaimer: result.disclaimer
       });
 
+      // Invalidate patient recommendations cache
+      cacheService.del(`ai:patient_recs:${req.user._id}`);
+
       // Audit logging
       await AIAuditLog.create({
         userId: req.user._id,
@@ -57,7 +61,7 @@ const generateRecommendation = async (req, res) => {
   }
 };
 
-// @desc    Get recommendation history for authenticated patient
+// @desc    Get recommendation history for authenticated patient (Cached 5 mins)
 // @route   GET /api/ai/patient-treatment-recommendations
 // @access  Private (Patient only for self)
 const getPatientRecommendations = async (req, res) => {
@@ -66,7 +70,9 @@ const getPatientRecommendations = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized for patient treatment recommendations.' });
     }
 
-    const history = await PatientTreatmentRecommendation.find({ patientId: req.user._id }).sort({ createdAt: -1 });
+    const history = await cacheService.wrap(`ai:patient_recs:${req.user._id}`, 300, async () => {
+      return await PatientTreatmentRecommendation.find({ patientId: req.user._id }).sort({ createdAt: -1 });
+    });
     res.json(history);
   } catch (error) {
     res.status(500).json({ message: error.message });

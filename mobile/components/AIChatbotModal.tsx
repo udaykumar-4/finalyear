@@ -14,6 +14,7 @@ import {
 import Colors from '../constants/Colors';
 import aiService, { ChatMessage } from '../services/aiService';
 import { UserRole } from '../types/user';
+import { useResponsive } from '../constants/Layout';
 
 interface AIChatbotModalProps {
   visible: boolean;
@@ -28,6 +29,7 @@ export const AIChatbotModal: React.FC<AIChatbotModalProps> = ({
   userRole,
   userName,
 }) => {
+  const { insets, isSmallDevice, isTablet } = useResponsive();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -129,7 +131,12 @@ export const AIChatbotModal: React.FC<AIChatbotModalProps> = ({
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.modalContent}>
+        <View
+          style={[
+            styles.modalContent,
+            isTablet && { maxWidth: 580, width: '100%', alignSelf: 'center' },
+          ]}
+        >
           {/* Modal Header */}
           <View style={styles.headerRow}>
             <Text style={styles.headerIcon}>🌿</Text>
@@ -210,7 +217,7 @@ export const AIChatbotModal: React.FC<AIChatbotModalProps> = ({
           </ScrollView>
 
           {/* Input Controls */}
-          <View style={styles.inputRow}>
+          <View style={[styles.inputRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <TextInput
               style={styles.textInput}
               placeholder="Ask about diet, therapy, or appointments..."

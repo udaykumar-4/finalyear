@@ -34,4 +34,6 @@ const aiRecommendationSchema = new Schema({
   }
 }, { timestamps: true });
 
+aiRecommendationSchema.index({ patientId: 1, createdAt: -1 }, { background: true, name: 'idx_airecommendations_patient_created' });
+
 module.exports = mongoose.model('AIRecommendation', aiRecommendationSchema);

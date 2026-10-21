@@ -12,13 +12,17 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import reportService, { PatientReportData } from '../../services/reportService';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function PatientReportScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -70,14 +74,23 @@ export default function PatientReportScreen() {
   }
 
   const patient = reportData?.user || user;
-  const docName = patient?.assignedDoctor && (patient.assignedDoctor && typeof patient.assignedDoctor === 'object') ? patient.assignedDoctor.full_name : 'Assigned Doctor N/A';
+  const docName = patient?.assignedDoctor && (typeof patient.assignedDoctor === 'object') ? patient.assignedDoctor.full_name : 'Assigned Doctor N/A';
 
   return (
     <View style={styles.container}>
       <Header title="My Medical Report" subtitle="Health Summary & Discharge Record" showLogout={true} />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
@@ -85,9 +98,12 @@ export default function PatientReportScreen() {
         {/* Action Header Banner */}
         <Card style={styles.bannerCard}>
           <View style={styles.bannerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.bannerTitle}>📄 Patient Health Report</Text>
-              <Text style={styles.bannerSub}>Complete history of consultations, prescriptions, and notes.</Text>
+            <View style={styles.bannerIconBadge}>
+              <Icon name="report" size={20} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.bannerTitle}>Patient Health Report</Text>
+              <Text style={styles.bannerSub}>Complete chronological history of consultations, prescriptions, and clinical notes.</Text>
             </View>
             <Button
               title="Export"
@@ -100,7 +116,10 @@ export default function PatientReportScreen() {
 
         {/* Section 1: Personal & Vitals */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>1. Personal & Vital Signs</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="user" size={14} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>1. Personal & Vital Signs</Text>
+          </View>
           <View style={styles.gridContainer}>
             <View style={styles.gridItem}>
               <Text style={styles.gridLabel}>Full Name</Text>
@@ -139,13 +158,27 @@ export default function PatientReportScreen() {
 
         {/* Section 2: Assigned Care Team */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>2. Primary Care Physician</Text>
-          <Text style={styles.careDocName}>👨‍⚕️ {docName}</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="doctor" size={14} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>2. Primary Care Physician</Text>
+          </View>
+          <View style={styles.physicianBox}>
+            <View style={styles.physicianAvatar}>
+              <Icon name="doctor" size={18} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.careDocName}>{docName}</Text>
+              <Text style={styles.careDocSub}>Lead Ayurvedic Physician & Panchakarma Specialist</Text>
+            </View>
+          </View>
         </Card>
 
         {/* Section 3: Prescriptions History */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>3. Panchakarma Prescriptions ({reportData?.prescriptions.length || 0})</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="treatment" size={14} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>3. Panchakarma Prescriptions ({reportData?.prescriptions.length || 0})</Text>
+          </View>
 
           {!reportData?.prescriptions || reportData.prescriptions.length === 0 ? (
             <Text style={styles.emptyText}>No prescription history found.</Text>
@@ -153,8 +186,15 @@ export default function PatientReportScreen() {
             reportData.prescriptions.map((rx) => (
               <View key={rx._id} style={styles.historyRow}>
                 <View style={styles.rowTop}>
-                  <Text style={styles.rowTitle}>💊 {rx.treatment}</Text>
-                  <Text style={styles.rowBadge}>{rx.status.toUpperCase()}</Text>
+                  <View style={styles.historyNameRow}>
+                    <Icon name="pill" size={13} color={Colors.primary} />
+                    <Text style={styles.rowTitle}>{rx.treatment}</Text>
+                  </View>
+                  <View style={[styles.rowBadge, { backgroundColor: rx.status === 'completed' ? Colors.success + '18' : Colors.warning + '18' }]}>
+                    <Text style={[styles.rowBadgeText, { color: rx.status === 'completed' ? Colors.success : Colors.warning }]}>
+                      {rx.status.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
                 <Text style={styles.rowSub}>
                   Duration: {rx.duration} days ({rx.progressCompleted} completed)
@@ -167,7 +207,10 @@ export default function PatientReportScreen() {
 
         {/* Section 4: Appointments History */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>4. Consultations & Sessions ({reportData?.appointments.length || 0})</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="calendar" size={14} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>4. Consultations & Sessions ({reportData?.appointments.length || 0})</Text>
+          </View>
 
           {!reportData?.appointments || reportData.appointments.length === 0 ? (
             <Text style={styles.emptyText}>No appointment history found.</Text>
@@ -175,11 +218,18 @@ export default function PatientReportScreen() {
             reportData.appointments.map((appt) => (
               <View key={appt._id} style={styles.historyRow}>
                 <View style={styles.rowTop}>
-                  <Text style={styles.rowTitle}>🌿 {appt.treatment}</Text>
-                  <Text style={styles.rowBadge}>{appt.status.toUpperCase()}</Text>
+                  <View style={styles.historyNameRow}>
+                    <Icon name="calendar" size={13} color={Colors.primary} />
+                    <Text style={styles.rowTitle}>{appt.treatment}</Text>
+                  </View>
+                  <View style={[styles.rowBadge, { backgroundColor: appt.status === 'completed' ? Colors.success + '18' : Colors.primary + '15' }]}>
+                    <Text style={[styles.rowBadgeText, { color: appt.status === 'completed' ? Colors.success : Colors.primary }]}>
+                      {appt.status.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
                 <Text style={styles.rowSub}>
-                  📅 {new Date(appt.appointment_date).toLocaleDateString()} at {appt.appointment_time}
+                  {new Date(appt.appointment_date).toLocaleDateString()} at {appt.appointment_time}
                 </Text>
               </View>
             ))
@@ -188,16 +238,22 @@ export default function PatientReportScreen() {
 
         {/* Section 5: Clinical Notes History */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>5. Clinical Progress Notes ({reportData?.notes.length || 0})</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="document" size={14} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>5. Clinical Progress Notes ({reportData?.notes.length || 0})</Text>
+          </View>
 
           {!reportData?.notes || reportData.notes.length === 0 ? (
             <Text style={styles.emptyText}>No clinical notes recorded.</Text>
           ) : (
             reportData.notes.map((note) => (
               <View key={note._id} style={styles.historyRow}>
-                <Text style={styles.noteAuthor}>
-                  ✍️ {(note.authorId && typeof note.authorId === 'object') ? `${note.authorId.full_name} (${note.authorId.role})` : 'Author'}
-                </Text>
+                <View style={styles.noteAuthorRow}>
+                  <Icon name="user" size={12} color={Colors.primary} />
+                  <Text style={styles.noteAuthor}>
+                    {(note.authorId && typeof note.authorId === 'object') ? `${note.authorId.full_name} (${note.authorId.role})` : 'Author'}
+                  </Text>
+                </View>
                 <Text style={styles.noteBody}>{note.note}</Text>
               </View>
             ))
@@ -215,38 +271,61 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   bannerCard: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    borderLeftWidth: 3.5,
+    borderLeftColor: Colors.primary,
+    marginBottom: 10,
+    padding: 14,
   },
   bannerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  bannerIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   bannerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  bannerSub: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  sectionCard: {
-    marginVertical: 6,
-  },
-  sectionTitle: {
+    ...Typography.bodyMedium,
     fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
+  },
+  bannerSub: {
+    ...Typography.caption,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 6,
+    padding: 14,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     marginBottom: 12,
-    paddingBottom: 6,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border + '80',
+  },
+  sectionTitle: {
+    ...Typography.h3,
+    fontSize: 14.5,
+    color: Colors.text,
   },
   gridContainer: {
     flexDirection: 'row',
@@ -257,26 +336,52 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   gridLabel: {
+    ...Typography.caption,
     fontSize: 11,
-    fontWeight: '600',
     color: Colors.textSecondary,
   },
   gridValue: {
+    ...Typography.bodyMedium,
     fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
     marginTop: 2,
   },
+  physicianBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  physicianAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   careDocName: {
-    fontSize: 15,
+    ...Typography.bodyMedium,
+    fontSize: 14.5,
     fontWeight: '700',
-    color: Colors.primary,
+    color: Colors.text,
+  },
+  careDocSub: {
+    ...Typography.caption,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   historyRow: {
     marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border + '70',
   },
   rowTop: {
     flexDirection: 'row',
@@ -284,43 +389,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  historyNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
   rowTitle: {
+    ...Typography.bodyMedium,
     fontSize: 14,
     fontWeight: '700',
     color: Colors.text,
   },
   rowBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    backgroundColor: Colors.primary + '15',
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 4,
   },
+  rowBadgeText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+  },
   rowSub: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
   },
   rowNotes: {
+    ...Typography.body,
     fontSize: 12,
     color: Colors.textMuted,
     fontStyle: 'italic',
-    marginTop: 2,
+    marginTop: 3,
+  },
+  noteAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
   },
   noteAuthor: {
+    ...Typography.caption,
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.secondary,
-    marginBottom: 2,
+    color: Colors.primary,
   },
   noteBody: {
-    fontSize: 13,
+    ...Typography.body,
+    fontSize: 12.5,
     color: Colors.text,
+    lineHeight: 18,
   },
   emptyText: {
+    ...Typography.caption,
     fontSize: 13,
     color: Colors.textMuted,
     fontStyle: 'italic',
+    paddingVertical: 4,
   },
 });

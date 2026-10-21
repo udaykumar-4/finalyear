@@ -22,8 +22,8 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 
 export interface DoctorPatientsPageProps {
-  onOpenClinicalSupport: (patientId: string, patientName: string) => void;
-  onOpenDiseasePrediction: (patientId: string, patientName: string) => void;
+  onOpenClinicalSupport: (patientId: string, patientName: string, patientCondition?: string) => void;
+  onOpenDiseasePrediction: (patientId: string, patientName: string, patientCondition?: string) => void;
   onOpenPrescribe: (patientId: string) => void;
 }
 
@@ -189,7 +189,7 @@ export const DoctorPatientsPage: React.FC<DoctorPatientsPageProps> = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onOpenClinicalSupport(p._id, p.full_name)}
+                        onClick={() => onOpenClinicalSupport(p._id, p.full_name, p.condition)}
                         title="AI Clinical Support"
                         leftIcon={<Sparkles size={14} />}
                       >
@@ -277,7 +277,7 @@ export const DoctorPatientsPage: React.FC<DoctorPatientsPageProps> = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onOpenClinicalSupport(selectedPatient._id, selectedPatient.full_name)}
+                  onClick={() => onOpenClinicalSupport(selectedPatient._id, selectedPatient.full_name, selectedPatient.condition)}
                   leftIcon={<Sparkles size={14} />}
                 >
                   Clinical Decision Support
@@ -285,7 +285,7 @@ export const DoctorPatientsPage: React.FC<DoctorPatientsPageProps> = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onOpenDiseasePrediction(selectedPatient._id, selectedPatient.full_name)}
+                  onClick={() => onOpenDiseasePrediction(selectedPatient._id, selectedPatient.full_name, selectedPatient.condition)}
                   leftIcon={<Activity size={14} />}
                 >
                   Disease & Imbalance Prediction

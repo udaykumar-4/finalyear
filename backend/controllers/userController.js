@@ -1,5 +1,6 @@
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
+const cacheService = require('../services/cache/cacheService');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -15,9 +16,20 @@ const generateToken = (id) => {
 // @route   GET /api/users
 const getAllUsers = async (req, res) => {
   try {
+    const role = req.query.role;
+    // Cache staff rosters (doctors/therapists) for 10 minutes
+    if (role === 'doctor' || role === 'therapist') {
+      const cachedStaff = await cacheService.wrap(`users:role:${role}`, 600, async () => {
+        return await User.find({ role })
+          .select('-password')
+          .populate('assignedDoctor', 'full_name');
+      });
+      return res.json(cachedStaff);
+    }
+
     const filter = {};
-    if (req.query.role) {
-      filter.role = req.query.role;
+    if (role) {
+      filter.role = role;
     }
     const users = await User.find(filter)
       .select('-password')
@@ -62,6 +74,8 @@ const updateUser = async (req, res) => {
       user.assignedDoctor = req.body.assignedDoctor || user.assignedDoctor;
       
       const updatedUser = await user.save();
+      cacheService.delPattern('users:role:*');
+      cacheService.del('analytics:global');
       res.json(updatedUser);
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -77,6 +91,8 @@ const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (user) {
+      cacheService.delPattern('users:role:*');
+      cacheService.del('analytics:global');
       await user.deleteOne();
       res.json({ message: 'User removed' });
     } else {
@@ -115,6 +131,8 @@ const updateUserProfile = async (req, res) => {
     }
 
     const updatedUser = await user.save();
+    cacheService.delPattern('users:role:*');
+    cacheService.del(`analytics:patient:${updatedUser._id}`);
     
     res.json({
       _id: updatedUser._id,
@@ -145,6 +163,10 @@ const blockTimeSlot = async (req, res) => {
 
     user.blockedSlots.push({ date: new Date(date), time });
     const updatedUser = await user.save();
+
+    // Invalidate availability and scheduling recommendations for this provider
+    cacheService.delPattern(`availability:${user._id}:*`);
+    cacheService.delPattern(`scheduling:recs:${user._id}:*`);
 
     res.json({
       _id: updatedUser._id,
@@ -178,6 +200,10 @@ const deleteBlockedSlot = async (req, res) => {
     // Pull the slot with the matching _id from the array
     user.blockedSlots.pull({ _id: slotId });
     const updatedUser = await user.save();
+
+    // Invalidate availability and scheduling recommendations for this provider
+    cacheService.delPattern(`availability:${user._id}:*`);
+    cacheService.delPattern(`scheduling:recs:${user._id}:*`);
 
     // Re-issue token
     res.json({

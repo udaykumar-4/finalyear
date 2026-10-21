@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Colors from '../constants/Colors';
+import Typography from '../constants/Typography';
 import Card from './Card';
 import ProgressBar from './ProgressBar';
+import Icon from './Icon';
 import analyticsService, { OutcomeAnalyticsData } from '../services/analyticsService';
 import { UserRole } from '../types/user';
 
@@ -70,9 +72,13 @@ export const OutcomeAnalyticsCard: React.FC<OutcomeAnalyticsCardProps> = ({
     return (
       <Card style={styles.card}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <Icon name="alert" size={24} color={Colors.error} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchAnalytics}>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={fetchAnalytics}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+          >
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -93,7 +99,9 @@ export const OutcomeAnalyticsCard: React.FC<OutcomeAnalyticsCardProps> = ({
   return (
     <Card style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.titleIcon}>📊</Text>
+        <View style={styles.iconCircle}>
+          <Icon name="chart" size={18} color={Colors.primary} />
+        </View>
         <View style={styles.titleContainer}>
           <Text style={styles.cardTitle}>Outcome Analytics Dashboard</Text>
           <Text style={styles.cardSubtitle}>
@@ -174,25 +182,34 @@ export const OutcomeAnalyticsCard: React.FC<OutcomeAnalyticsCardProps> = ({
           <View style={styles.grid}>
             {patientReported.avgOverallRating !== undefined && patientReported.avgOverallRating > 0 && (
               <View style={styles.metricItem}>
-                <Text style={[styles.metricValue, { color: '#f39c12' }]}>
-                  {patientReported.avgOverallRating} ★
-                </Text>
+                <View style={styles.starMetricRow}>
+                  <Text style={[styles.metricValue, { color: Colors.secondary }]}>
+                    {patientReported.avgOverallRating}
+                  </Text>
+                  <Icon name="star" size={14} color={Colors.secondary} style={styles.inlineStar} />
+                </View>
                 <Text style={styles.metricLabel}>Overall Satisfaction</Text>
               </View>
             )}
             {patientReported.avgDoctorRating !== undefined && patientReported.avgDoctorRating > 0 && (
               <View style={styles.metricItem}>
-                <Text style={[styles.metricValue, { color: Colors.primary }]}>
-                  {patientReported.avgDoctorRating} ★
-                </Text>
+                <View style={styles.starMetricRow}>
+                  <Text style={[styles.metricValue, { color: Colors.primary }]}>
+                    {patientReported.avgDoctorRating}
+                  </Text>
+                  <Icon name="star" size={14} color={Colors.primary} style={styles.inlineStar} />
+                </View>
                 <Text style={styles.metricLabel}>Doctor Rating</Text>
               </View>
             )}
             {patientReported.avgTherapistRating !== undefined && patientReported.avgTherapistRating > 0 && (
               <View style={styles.metricItem}>
-                <Text style={[styles.metricValue, { color: Colors.secondary }]}>
-                  {patientReported.avgTherapistRating} ★
-                </Text>
+                <View style={styles.starMetricRow}>
+                  <Text style={[styles.metricValue, { color: Colors.accent }]}>
+                    {patientReported.avgTherapistRating}
+                  </Text>
+                  <Icon name="star" size={14} color={Colors.accent} style={styles.inlineStar} />
+                </View>
                 <Text style={styles.metricLabel}>Therapist Rating</Text>
               </View>
             )}
@@ -200,7 +217,7 @@ export const OutcomeAnalyticsCard: React.FC<OutcomeAnalyticsCardProps> = ({
         </View>
       )}
 
-      {/* 4. Clinical Vitals Outcomes (Only rendered if empirical DB vitals exist) */}
+      {/* 4. Clinical Vitals Outcomes */}
       {clinical && clinical.hasVitalsData && clinical.vitals && (
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Recorded Clinical Vitals</Text>
@@ -240,39 +257,49 @@ const styles = StyleSheet.create({
   card: {
     marginVertical: 10,
     padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
   },
-  titleIcon: {
-    fontSize: 26,
-    marginRight: 10,
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '14',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   titleContainer: {
     flex: 1,
   },
   cardTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '800',
     color: Colors.text,
   },
   cardSubtitle: {
-    fontSize: 12,
+    ...Typography.caption,
     color: Colors.textSecondary,
     marginTop: 2,
   },
   section: {
-    marginTop: 12,
+    marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
   sectionHeader: {
-    fontSize: 13,
+    ...Typography.caption,
     fontWeight: '700',
     color: Colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 10,
   },
   grid: {
@@ -286,18 +313,28 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   metricValue: {
+    ...Typography.metric,
     fontSize: 20,
-    fontWeight: '800',
+    lineHeight: 24,
     color: Colors.text,
   },
   metricLabel: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginTop: 3,
     textAlign: 'center',
   },
+  starMetricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inlineStar: {
+    marginLeft: 3,
+    marginBottom: 2,
+  },
   financialRow: {
-    marginTop: 8,
+    marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: Colors.border + '60',
@@ -305,7 +342,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   finLabel: {
-    fontSize: 11,
+    ...Typography.caption,
     color: Colors.textSecondary,
   },
   finValue: {
@@ -318,21 +355,22 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressLabel: {
-    fontSize: 12,
+    ...Typography.caption,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
   progressValue: {
-    fontSize: 12,
+    ...Typography.caption,
     fontWeight: '800',
     color: Colors.primary,
   },
   adherenceStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 6,
+    marginTop: 8,
   },
   adherenceSub: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textSecondary,
   },
@@ -342,27 +380,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   vitalChip: {
-    backgroundColor: Colors.primary + '12',
+    backgroundColor: Colors.primary + '10',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary + '20',
     minWidth: 100,
   },
   vitalLabel: {
+    ...Typography.caption,
     fontSize: 10,
     color: Colors.textSecondary,
   },
   vitalVal: {
+    ...Typography.bodyMedium,
     fontSize: 13,
     fontWeight: '700',
     color: Colors.primary,
     marginTop: 2,
   },
   loadingContainer: {
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
   },
   loadingText: {
+    ...Typography.body,
     fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 8,
@@ -371,32 +414,31 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
   },
-  errorIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
   errorText: {
-    fontSize: 12,
+    ...Typography.caption,
     color: Colors.error,
     textAlign: 'center',
-    marginBottom: 10,
+    marginVertical: 8,
   },
   retryBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
+    minHeight: 36,
+    justifyContent: 'center',
   },
   retryText: {
+    ...Typography.button,
     color: Colors.white,
     fontSize: 12,
-    fontWeight: '700',
   },
   emptyText: {
-    fontSize: 13,
+    ...Typography.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
     padding: 16,
+    fontStyle: 'italic',
   },
 });
 

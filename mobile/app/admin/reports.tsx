@@ -15,13 +15,17 @@ import appointmentService from '../../services/appointmentService';
 import { User } from '../../types/user';
 import { Appointment } from '../../types/appointment';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
+import Icon from '../../components/Icon';
 import ProgressBar from '../../components/ProgressBar';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function AdminReportsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -70,7 +74,7 @@ export default function AdminReportsScreen() {
   const handleExportSummary = () => {
     Alert.alert(
       'Administrative Report Generated',
-      `System Audit Summary:\nTotal Accounts: ${users.length}\nTotal Appointments: ${appointments.length}\nTotal Revenue Collected: ₹${paidRevenue}`
+      `System Audit Summary:\nTotal Accounts: ${users.length}\nTotal Appointments: ${appointments.length}\nTotal Revenue Collected: ₹${paidRevenue.toLocaleString('en-IN')}`
     );
   };
 
@@ -99,19 +103,35 @@ export default function AdminReportsScreen() {
       <Header title="Administrative Reports" subtitle="System Audit & Financial Summary" showLogout={true} />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.secondary]} />}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {/* Action Header */}
         <Card style={styles.actionCard}>
           <View style={styles.actionRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionTitle}>📈 System Analytics Summary</Text>
+            <View style={styles.actionIconBadge}>
+              <Icon name="chart" size={20} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.actionTitle}>System Analytics Summary</Text>
               <Text style={styles.actionSub}>Aggregated data across all 5 system roles.</Text>
             </View>
-            <TouchableOpacity style={styles.exportBtn} onPress={handleExportSummary}>
+            <TouchableOpacity
+              style={styles.exportBtn}
+              onPress={handleExportSummary}
+              activeOpacity={0.8}
+            >
               <Text style={styles.exportBtnText}>Export Audit</Text>
             </TouchableOpacity>
           </View>
@@ -119,27 +139,33 @@ export default function AdminReportsScreen() {
 
         {/* Financial Analytics */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>💰 Revenue & Billing Performance</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="card" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Revenue & Billing Performance</Text>
+          </View>
           <View style={styles.rowItem}>
             <Text style={styles.label}>Total Collected Revenue:</Text>
-            <Text style={[styles.val, { color: Colors.success }]}>₹{paidRevenue}</Text>
+            <Text style={[styles.val, { color: Colors.success }]}>₹{paidRevenue.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.rowItem}>
             <Text style={styles.label}>Total Pending Receivables:</Text>
-            <Text style={[styles.val, { color: Colors.warning }]}>₹{pendingRevenue}</Text>
+            <Text style={[styles.val, { color: Colors.warning }]}>₹{pendingRevenue.toLocaleString('en-IN')}</Text>
           </View>
           <ProgressBar
             progress={paidRevenue + pendingRevenue > 0 ? (paidRevenue / (paidRevenue + pendingRevenue)) * 100 : 100}
             label={`Collection Efficiency (${Math.round(paidRevenue + pendingRevenue > 0 ? (paidRevenue / (paidRevenue + pendingRevenue)) * 100 : 100)}%)`}
             color={Colors.success}
-            height={12}
+            height={10}
             style={{ marginTop: 10 }}
           />
         </Card>
 
         {/* Session Completion Performance */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>📊 Consultation Completion Performance</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="calendar" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Consultation Completion Performance</Text>
+          </View>
           <View style={styles.rowItem}>
             <Text style={styles.label}>Total Scheduled Sessions:</Text>
             <Text style={styles.val}>{totalAppts}</Text>
@@ -156,42 +182,50 @@ export default function AdminReportsScreen() {
             progress={completionRate}
             label={`Completion Rate (${completionRate}%)`}
             color={Colors.primary}
-            height={12}
+            height={10}
             style={{ marginTop: 10 }}
           />
         </Card>
 
         {/* User Account Allocation */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>👥 Account Allocation by Role</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="users" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Account Allocation by Role</Text>
+          </View>
           <ProgressBar
             progress={totalUsers > 0 ? (patientsCount / totalUsers) * 100 : 0}
             label={`Patients: ${patientsCount} accounts (${Math.round(totalUsers > 0 ? (patientsCount / totalUsers) * 100 : 0)}%)`}
             color={Colors.primary}
-            style={{ marginBottom: 8 }}
+            height={9}
+            style={{ marginBottom: 10 }}
           />
           <ProgressBar
             progress={totalUsers > 0 ? (doctorsCount / totalUsers) * 100 : 0}
             label={`Doctors: ${doctorsCount} accounts (${Math.round(totalUsers > 0 ? (doctorsCount / totalUsers) * 100 : 0)}%)`}
             color={Colors.secondary}
-            style={{ marginBottom: 8 }}
+            height={9}
+            style={{ marginBottom: 10 }}
           />
           <ProgressBar
             progress={totalUsers > 0 ? (therapistsCount / totalUsers) * 100 : 0}
             label={`Therapists: ${therapistsCount} accounts (${Math.round(totalUsers > 0 ? (therapistsCount / totalUsers) * 100 : 0)}%)`}
-            color={Colors.accentDark || '#15803d'}
-            style={{ marginBottom: 8 }}
+            color={Colors.accent}
+            height={9}
+            style={{ marginBottom: 10 }}
           />
           <ProgressBar
             progress={totalUsers > 0 ? (receptionistsCount / totalUsers) * 100 : 0}
             label={`Receptionists: ${receptionistsCount} accounts (${Math.round(totalUsers > 0 ? (receptionistsCount / totalUsers) * 100 : 0)}%)`}
-            color="#d97706"
-            style={{ marginBottom: 8 }}
+            color={Colors.warning}
+            height={9}
+            style={{ marginBottom: 10 }}
           />
           <ProgressBar
             progress={totalUsers > 0 ? (adminCount / totalUsers) * 100 : 0}
             label={`Administrators: ${adminCount} accounts`}
-            color="#6b7280"
+            color={Colors.textSecondary}
+            height={9}
           />
         </Card>
       </ScrollView>
@@ -205,50 +239,75 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   actionCard: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    borderLeftWidth: 3.5,
+    borderLeftColor: Colors.primary,
+    marginBottom: 10,
+    padding: 14,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  actionIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   actionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.secondary,
+    ...Typography.bodyMedium,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
   },
   actionSub: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11,
     color: Colors.textSecondary,
     marginTop: 2,
   },
   exportBtn: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    minHeight: 36,
+    justifyContent: 'center',
   },
   exportBtnText: {
+    ...Typography.caption,
     color: Colors.white,
     fontSize: 12,
     fontWeight: '700',
   },
   sectionCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 14.5,
     color: Colors.text,
-    marginBottom: 10,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   rowItem: {
     flexDirection: 'row',
@@ -256,12 +315,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   label: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
     color: Colors.textSecondary,
   },
   val: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...Typography.metric,
+    fontSize: 13.5,
     color: Colors.text,
   },
 });

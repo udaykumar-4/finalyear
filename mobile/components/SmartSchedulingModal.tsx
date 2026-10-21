@@ -13,6 +13,7 @@ import Input from './Input';
 import Button from './Button';
 import Card from './Card';
 import smartSchedulingService, { RecommendedSlot } from '../services/smartSchedulingService';
+import { useResponsive } from '../constants/Layout';
 
 interface SmartSchedulingModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ export const SmartSchedulingModal: React.FC<SmartSchedulingModalProps> = ({
   staffName,
   onSelectSlot,
 }) => {
+  const { insets, isTablet } = useResponsive();
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [preferredTime, setPreferredTime] = useState<string>('10:00 AM');
   const [loading, setLoading] = useState<boolean>(false);
@@ -68,7 +70,12 @@ export const SmartSchedulingModal: React.FC<SmartSchedulingModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View
+          style={[
+            styles.modalContent,
+            isTablet && { maxWidth: 580, width: '100%', alignSelf: 'center' },
+          ]}
+        >
           <View style={styles.headerRow}>
             <Text style={styles.titleIcon}>⚡</Text>
             <View style={styles.titleTextContainer}>
@@ -82,7 +89,12 @@ export const SmartSchedulingModal: React.FC<SmartSchedulingModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Math.max(insets.bottom, 20) + 20 },
+            ]}
+          >
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>❌ {error}</Text>

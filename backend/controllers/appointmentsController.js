@@ -1,6 +1,26 @@
 const Appointment = require('../models/appointment');
 const User = require('../models/user');
 const Prescription = require('../models/prescription');
+const cacheService = require('../services/cache/cacheService');
+
+// Helper to invalidate analytics, availability, and scheduling caches
+const invalidateAppointmentCaches = (appt) => {
+  cacheService.del('analytics:global');
+  if (!appt) return;
+  if (appt.doctorId) {
+    cacheService.del(`analytics:doctor:${appt.doctorId}`);
+    cacheService.delPattern(`availability:${appt.doctorId}:*`);
+    cacheService.delPattern(`scheduling:recs:${appt.doctorId}:*`);
+  }
+  if (appt.therapistId) {
+    cacheService.del(`analytics:therapist:${appt.therapistId}`);
+    cacheService.delPattern(`availability:${appt.therapistId}:*`);
+    cacheService.delPattern(`scheduling:recs:${appt.therapistId}:*`);
+  }
+  if (appt.patientId) {
+    cacheService.del(`analytics:patient:${appt.patientId}`);
+  }
+};
 
 // Helpers for timezone-safe date extraction
 const getLocalDateStr = (d) => {
@@ -84,6 +104,13 @@ const getAvailability = async (req, res) => {
     const dateStr = getLocalDateStr(date);
     const todayStr = getTodayDateStr();
 
+    // Check availability cache (60s TTL)
+    const cacheKey = `availability:${providerId}:${dateStr}`;
+    const cachedAvailability = cacheService.get(cacheKey);
+    if (cachedAvailability) {
+      return res.json(cachedAvailability);
+    }
+
     // Check if provider exists
     const provider = await User.findById(providerId);
     if (!provider) {
@@ -158,7 +185,7 @@ const getAvailability = async (req, res) => {
     const hasWorkingHours = !isInactiveOrOnLeave;
     const isAvailableDate = hasWorkingHours && !isPastDate;
 
-    res.json({
+    const result = {
       success: true,
       date: dateStr,
       providerId,
@@ -168,7 +195,10 @@ const getAvailability = async (req, res) => {
       hasWorkingHours,
       isAvailableDate,
       slots
-    });
+    };
+
+    cacheService.set(cacheKey, result, 60);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -264,6 +294,7 @@ const createAppointment = async (req, res) => {
     });
 
     const createdAppointment = await appointment.save();
+    invalidateAppointmentCaches(createdAppointment);
     
     // Return fully populated appointment object
     const populated = await Appointment.findById(createdAppointment._id)
@@ -380,6 +411,7 @@ const updateAppointmentStatus = async (req, res) => {
     const previousStatus = appointment.status;
     appointment.status = status;
     const updatedAppointment = await appointment.save();
+    invalidateAppointmentCaches(updatedAppointment);
 
     // Auto-sync patient treatment progress when appointment is completed
     if (status === 'completed' && previousStatus !== 'completed' && appointment.patientId) {
@@ -415,6 +447,7 @@ const deleteAppointment = async (req, res) => {
   try {
     const appointment = await Appointment.findById(req.params.id);
     if (appointment) {
+      invalidateAppointmentCaches(appointment);
       await appointment.deleteOne();
       res.json({ message: 'Appointment removed' });
     } else {
@@ -434,6 +467,7 @@ const markAppointmentAsPaid = async (req, res) => {
     if (appointment) {
       appointment.isPaid = typeof req.body.isPaid === 'boolean' ? req.body.isPaid : true;
       const updatedAppointment = await appointment.save();
+      invalidateAppointmentCaches(updatedAppointment);
       res.json(updatedAppointment);
     } else {
       res.status(404).json({ message: 'Appointment not found' });

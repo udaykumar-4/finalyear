@@ -14,6 +14,7 @@ const schedulingRoutes = require('./schedulingRoutes');
 const aiRoutes = require('./aiRoutes');
 const patientTreatmentRecommendationRoutes = require('./patientTreatmentRecommendationRoutes');
 const documentRoutes = require('./documentRoutes');
+const prakritiRoutes = require('./prakritiRoutes');
 
 // Tell the router to use these files for specific paths
 router.use('/auth', authRoutes);
@@ -26,6 +27,7 @@ router.use('/documents', documentRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/scheduling', schedulingRoutes);
+router.use('/prakriti', prakritiRoutes);
 router.use('/ai/patient-treatment-recommendations', patientTreatmentRecommendationRoutes);
 router.use('/ai', aiRoutes);
 

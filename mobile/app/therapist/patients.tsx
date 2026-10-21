@@ -18,13 +18,16 @@ import { Prescription } from '../../types/prescription';
 import { Appointment } from '../../types/appointment';
 import { Note } from '../../types/note';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import ProgressBar from '../../components/ProgressBar';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export interface AssignedPatientItem {
   patientId: string;
@@ -33,6 +36,7 @@ export interface AssignedPatientItem {
 }
 
 export default function TherapistPatientsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -62,7 +66,6 @@ export default function TherapistPatientsScreen() {
     if (!user) return;
     setError(null);
     try {
-      // Fetch only prescriptions assigned to THIS therapist
       const data = await prescriptionService.getByTherapistId(user._id);
       setPrescriptions(data);
     } catch (err: any) {
@@ -141,14 +144,25 @@ export default function TherapistPatientsScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {prescriptions.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🧘</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="therapist" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Patients Assigned</Text>
             <Text style={styles.emptyDesc}>You currently have no active patient prescriptions assigned to you.</Text>
           </Card>
@@ -161,29 +175,45 @@ export default function TherapistPatientsScreen() {
             return (
               <TouchableOpacity
                 key={rx._id}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
                 onPress={() => handleOpenPatientDetails(rx)}
               >
                 <Card style={styles.patientCard}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.patientName}>👤 {pName}</Text>
-                    <Text style={[styles.statusBadge, { backgroundColor: rx.status === 'completed' ? Colors.successBg : Colors.warningBg, color: rx.status === 'completed' ? Colors.success : Colors.warning }]}>
-                      {rx.status.toUpperCase()}
-                    </Text>
+                    <View style={styles.patientRow}>
+                      <View style={styles.patientAvatar}>
+                        <Icon name="user" size={14} color={Colors.primary} />
+                      </View>
+                      <Text style={styles.patientName}>{pName}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: rx.status === 'completed' ? Colors.success + '18' : Colors.warning + '18' }]}>
+                      <Text style={[styles.statusBadgeText, { color: rx.status === 'completed' ? Colors.success : Colors.warning }]}>
+                        {rx.status.toUpperCase()}
+                      </Text>
+                    </View>
                   </View>
 
-                  <Text style={styles.treatmentText}>🌿 Protocol: {rx.treatment}</Text>
-                  <Text style={styles.doctorText}>👨‍⚕️ Prescribed By: {docName}</Text>
+                  <View style={styles.detailRow}>
+                    <Icon name="treatment" size={12} color={Colors.primary} />
+                    <Text style={styles.treatmentText}>Protocol: {rx.treatment}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon name="doctor" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.doctorText}>Prescribed By: {docName}</Text>
+                  </View>
 
                   <ProgressBar
                     progress={rx.duration > 0 ? (rx.progressCompleted / rx.duration) * 100 : 0}
                     label={`Sessions: ${rx.progressCompleted} done • ${remaining} remaining`}
-                    color={Colors.accent}
+                    color={Colors.primary}
+                    height={10}
                     style={{ marginVertical: 8 }}
                   />
 
                   <View style={styles.footerRow}>
-                    <Text style={styles.viewChartText}>View Full Patient Care Chart →</Text>
+                    <Text style={styles.viewChartText}>View Full Patient Care Chart</Text>
+                    <Icon name="chevron-right" size={12} color={Colors.primary} />
                   </View>
                 </Card>
               </TouchableOpacity>
@@ -197,7 +227,7 @@ export default function TherapistPatientsScreen() {
         <Modal
           visible={!!selectedRx}
           transparent
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setSelectedRx(null)}
         >
           <View style={styles.modalOverlay}>
@@ -205,12 +235,15 @@ export default function TherapistPatientsScreen() {
               <View style={styles.modalHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modalTitle}>
-                    👤 {(selectedRx.patientId && typeof selectedRx.patientId === 'object') ? selectedRx.patientId.full_name : 'Patient'}
+                    {(selectedRx.patientId && typeof selectedRx.patientId === 'object') ? selectedRx.patientId.full_name : 'Patient'}
                   </Text>
                   <Text style={styles.modalSub}>Assigned Therapy Chart</Text>
                 </View>
-                <TouchableOpacity onPress={() => setSelectedRx(null)}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                <TouchableOpacity
+                  onPress={() => setSelectedRx(null)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="close" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -220,7 +253,10 @@ export default function TherapistPatientsScreen() {
                 <ScrollView style={{ maxHeight: 480 }}>
                   {/* Prescription & Protocol Summary */}
                   <Card style={styles.chartCard}>
-                    <Text style={styles.chartSectionTitle}>🌿 Treatment & Protocol Details</Text>
+                    <View style={styles.chartTitleRow}>
+                      <Icon name="treatment" size={14} color={Colors.primary} />
+                      <Text style={styles.chartSectionTitle}>Treatment & Protocol Details</Text>
+                    </View>
                     <Text style={styles.chartText}>Treatment Name: {selectedRx.treatment}</Text>
                     <Text style={styles.chartText}>
                       Doctor: {(selectedRx.doctorId && typeof selectedRx.doctorId === 'object') ? selectedRx.doctorId.full_name : 'Prescribing Doctor'}
@@ -230,6 +266,8 @@ export default function TherapistPatientsScreen() {
                     <ProgressBar
                       progress={selectedRx.duration > 0 ? (selectedRx.progressCompleted / selectedRx.duration) * 100 : 0}
                       label={`Sessions Completed: ${selectedRx.progressCompleted} of ${selectedRx.duration}`}
+                      color={Colors.primary}
+                      height={10}
                       style={{ marginVertical: 8 }}
                     />
                     <Text style={styles.remainingText}>
@@ -253,14 +291,17 @@ export default function TherapistPatientsScreen() {
 
                   {/* Therapy Sessions History */}
                   <Card style={styles.chartCard}>
-                    <Text style={styles.chartSectionTitle}>📅 Scheduled Sessions ({patientAppts.length})</Text>
+                    <View style={styles.chartTitleRow}>
+                      <Icon name="calendar" size={14} color={Colors.primary} />
+                      <Text style={styles.chartSectionTitle}>Scheduled Sessions ({patientAppts.length})</Text>
+                    </View>
                     {patientAppts.length === 0 ? (
                       <Text style={styles.emptyChartText}>No session appointments scheduled yet.</Text>
                     ) : (
                       patientAppts.map((appt) => (
                         <View key={appt._id} style={styles.apptRow}>
                           <Text style={styles.apptText}>
-                            📅 {new Date(appt.appointment_date).toLocaleDateString()} at {appt.appointment_time} — {appt.treatment} ({appt.status})
+                            {new Date(appt.appointment_date).toLocaleDateString()} at {appt.appointment_time} — {appt.treatment} ({appt.status})
                           </Text>
                         </View>
                       ))
@@ -269,7 +310,10 @@ export default function TherapistPatientsScreen() {
 
                   {/* Clinical Progress Notes & Logger */}
                   <Card style={styles.chartCard}>
-                    <Text style={styles.chartSectionTitle}>✍️ Therapy Progress Notes ({patientNotes.length})</Text>
+                    <View style={styles.chartTitleRow}>
+                      <Icon name="document" size={14} color={Colors.primary} />
+                      <Text style={styles.chartSectionTitle}>Therapy Progress Notes ({patientNotes.length})</Text>
+                    </View>
                     {patientNotes.length === 0 ? (
                       <Text style={styles.emptyChartText}>No notes logged for this patient.</Text>
                     ) : (
@@ -319,149 +363,203 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   patientCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   patientName: {
-    fontSize: 17,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
   statusBadge: {
-    fontSize: 10,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  statusBadgeText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3,
   },
   treatmentText: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...Typography.caption,
+    fontSize: 12.5,
     color: Colors.text,
-    marginBottom: 2,
   },
   doctorText: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
-    marginBottom: 4,
   },
   footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
     marginTop: 6,
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    alignItems: 'flex-end',
+    borderTopColor: Colors.border + '60',
   },
   viewChartText: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.primary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(17, 35, 24, 0.45)',
     justifyContent: 'center',
     padding: 16,
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    ...Typography.h3,
+    fontSize: 17,
     color: Colors.text,
   },
   modalSub: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11.5,
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  closeBtn: {
-    fontSize: 20,
-    color: Colors.textMuted,
-    padding: 4,
-  },
   chartCard: {
     marginVertical: 4,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    padding: 12,
   },
-  chartSectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
+  chartTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 8,
   },
+  chartSectionTitle: {
+    ...Typography.h3,
+    fontSize: 14,
+    color: Colors.text,
+  },
   chartText: {
-    fontSize: 13,
+    ...Typography.body,
+    fontSize: 12.5,
     color: Colors.text,
     marginBottom: 4,
   },
   remainingText: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.primary,
-    marginBottom: 8,
+    marginTop: 2,
   },
   boxContainer: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: Colors.surface,
     padding: 10,
     borderRadius: 8,
-    marginTop: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 8,
   },
   boxContainerAlt: {
-    backgroundColor: '#fffbe6',
+    backgroundColor: Colors.surface,
     padding: 10,
     borderRadius: 8,
-    marginTop: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 8,
   },
   boxTitle: {
-    fontSize: 11,
+    ...Typography.caption,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 2,
   },
   boxText: {
+    ...Typography.body,
     fontSize: 12,
     color: Colors.text,
+    lineHeight: 17,
   },
   emptyChartText: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textMuted,
     fontStyle: 'italic',
@@ -470,6 +568,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   apptText: {
+    ...Typography.body,
     fontSize: 12,
     color: Colors.text,
   },
@@ -477,25 +576,28 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border + '80',
   },
   noteAuthor: {
-    fontSize: 11,
+    ...Typography.caption,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.secondary,
   },
   noteBody: {
+    ...Typography.body,
     fontSize: 12,
     color: Colors.text,
     marginTop: 2,
   },
   addNoteBox: {
-    marginTop: 12,
+    marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
   },
   addNoteTitle: {
+    ...Typography.caption,
     fontSize: 12,
     fontWeight: '700',
     color: Colors.text,

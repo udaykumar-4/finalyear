@@ -26,8 +26,7 @@ const patientTreatmentRecommendationSchema = new Schema({
   patientId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   symptoms: {
     type: String,
@@ -51,5 +50,7 @@ const patientTreatmentRecommendationSchema = new Schema({
     default: '⚠️ AI-generated educational treatment recommendations. Requires clinician evaluation prior to starting therapy.'
   }
 }, { timestamps: true });
+
+patientTreatmentRecommendationSchema.index({ patientId: 1, createdAt: -1 }, { background: true, name: 'idx_patienttreatmentrecs_patient_created' });
 
 module.exports = mongoose.model('PatientTreatmentRecommendation', patientTreatmentRecommendationSchema);

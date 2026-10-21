@@ -10,12 +10,16 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
+import { useResponsive } from '../../constants/Layout';
 
 export default function ReceptionistMoreScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading, updateUserInContext, logout } = useAuth();
   const router = useRouter();
 
@@ -50,23 +54,37 @@ export default function ReceptionistMoreScreen() {
     <View style={styles.container}>
       <Header title="Reception Settings" subtitle="Account & Desk Configuration" showLogout={true} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+      >
         {/* Receptionist Profile Card */}
         <Card style={styles.profileCard}>
-          <Text style={styles.cardTitle}>🏢 Desk Profile Settings</Text>
+          <View style={styles.cardTitleRow}>
+            <Icon name="receptionist" size={15} color={Colors.primary} />
+            <Text style={styles.cardTitle}>Desk Profile Settings</Text>
+          </View>
 
           <Input
             label="Full Name (Read-only)"
             value={user?.full_name}
             editable={false}
-            style={{ backgroundColor: Colors.background }}
+            style={{ backgroundColor: Colors.surface }}
           />
 
           <Input
             label="Email Address (Read-only)"
             value={user?.email}
             editable={false}
-            style={{ backgroundColor: Colors.background }}
+            style={{ backgroundColor: Colors.surface }}
           />
 
           <Input
@@ -94,7 +112,10 @@ export default function ReceptionistMoreScreen() {
 
         {/* Account Controls */}
         <Card style={styles.profileCard}>
-          <Text style={styles.cardTitle}>⚙️ Account Session</Text>
+          <View style={styles.cardTitleRow}>
+            <Icon name="gear" size={15} color={Colors.primary} />
+            <Text style={styles.cardTitle}>Account Session</Text>
+          </View>
           <Button
             title="Sign Out of Receptionist Desk"
             onPress={logout}
@@ -114,18 +135,25 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   profileCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginBottom: 16,
+    padding: 16,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 14,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 15,
     color: Colors.text,
-    marginBottom: 12,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
 });

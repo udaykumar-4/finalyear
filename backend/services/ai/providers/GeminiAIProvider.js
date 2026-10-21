@@ -1,4 +1,6 @@
 const BaseAIProvider = require('./BaseAIProvider');
+const crypto = require('crypto');
+const cacheService = require('../../cache/cacheService');
 
 class GeminiAIProvider extends BaseAIProvider {
   constructor() {
@@ -38,6 +40,14 @@ ${contextString}
 ${userQuestion}
 </user_question>`;
 
+      // Check external AI response cache (15m TTL)
+      const promptHash = crypto.createHash('sha256').update(fullPrompt).digest('hex');
+      const cacheKey = `gemini:hash:${promptHash}`;
+      const cached = cacheService.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       // Query Google Gemini REST API
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
       
@@ -60,11 +70,14 @@ ${userQuestion}
         throw new Error('Empty response payload from Gemini API');
       }
 
-      return {
+      const result = {
         success: true,
         response: text.trim(),
         isPersonalized: Object.keys(contextData).length > 0
       };
+
+      cacheService.set(cacheKey, result, 900); // 15 mins TTL
+      return result;
     } catch (err) {
       console.error('GeminiAIProvider Error:', err.message);
       return {

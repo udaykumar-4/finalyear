@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -9,14 +9,61 @@ const User = require('./models/user');
 // Import main router
 const mainApiRouter = require('./routes/index');
 
+const path = require('path');
+const fs = require('fs');
+const cacheService = require('./services/cache/cacheService');
+
 const app = express();
 
 // --- Middleware ---
 app.use(cors()); 
 app.use(express.json()); 
+app.set('etag', 'strong'); // Enable HTTP ETag generation
+
+// --- API Cache Protection Middleware ---
+// Protect medical privacy: prevent shared proxies/CDNs from caching private medical data
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
+// Cache Metrics Endpoint
+app.get('/api/cache/metrics', (req, res) => {
+  res.json(cacheService.getMetrics());
+});
 
 // --- Routes ---
 app.use('/api', mainApiRouter); 
+
+// --- Static Frontend Serving with HTTP Cache Headers ---
+const frontendDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  // Content-hashed immutable assets (Vite bundle JS, CSS, chunk files)
+  app.use('/assets', express.static(path.join(frontendDist, 'assets'), {
+    maxAge: '1y',
+    immutable: true
+  }));
+
+  // General static files (favicon, logos)
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    }
+  }));
+
+  // SPA fallback
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+} 
 
 // --- Auto-Seed Demo Users ---
 const seedDemoUsers = async () => {

@@ -1,5 +1,44 @@
 import apiClient from '../api/client';
 
+export interface TherapyModalityStat {
+  name: string;
+  count: number;
+  completedCount: number;
+  activeCount?: number;
+  completionRate: number;
+  color: string;
+  avgDuration?: string;
+}
+
+export interface WeeklyTrendStat {
+  day: string;
+  scheduled: number;
+  completed: number;
+  total: number;
+}
+
+export interface OutcomeMetricStat {
+  name: string;
+  value: number;
+  benchmark: number;
+  count: number;
+  color: string;
+  description: string;
+}
+
+export interface DoshaDistributionStat {
+  vataPercent: number;
+  pittaPercent: number;
+  kaphaPercent: number;
+  totalAssessments: number;
+  dominantCounts?: {
+    vata: number;
+    pitta: number;
+    kapha: number;
+    other: number;
+  };
+}
+
 export interface OutcomeAnalyticsData {
   operational?: {
     totalAppointments: number;
@@ -32,6 +71,8 @@ export interface OutcomeAnalyticsData {
     patientsWithVitalsRecorded?: number;
     hasReliableVitals?: boolean;
     hasVitalsData?: boolean;
+    prakritiAssessmentRate?: number;
+    uniqueAssessedPatients?: number;
     vitals?: {
       bloodPressure?: string;
       heartRate?: string;
@@ -44,11 +85,18 @@ export interface OutcomeAnalyticsData {
     full_name: string;
     condition?: string;
   };
+  modalities?: TherapyModalityStat[];
+  weeklyTrend?: WeeklyTrendStat[];
+  outcomeMetrics?: OutcomeMetricStat[];
+  doshaDistribution?: DoshaDistributionStat;
 }
 
 export const analyticsService = {
-  getGlobalOutcomes: async (): Promise<OutcomeAnalyticsData> => {
-    const response = await apiClient.get<OutcomeAnalyticsData>('/analytics/outcomes');
+  getGlobalOutcomes: async (timeRange?: string, refresh?: boolean): Promise<OutcomeAnalyticsData> => {
+    const params: Record<string, string | boolean> = {};
+    if (timeRange) params.timeRange = timeRange;
+    if (refresh) params.refresh = refresh;
+    const response = await apiClient.get<OutcomeAnalyticsData>('/analytics/outcomes', { params });
     return response.data;
   },
 

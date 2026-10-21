@@ -1,9 +1,13 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import Colors from '../../constants/Colors';
-import { Text } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useResponsive } from '../../constants/Layout';
+import Icon from '../../components/Icon';
 
 export default function ReceptionistLayout() {
+  const { tabBarHeight, tabBarPaddingBottom, isSmallDevice } = useResponsive();
+
   return (
     <Tabs
       screenOptions={{
@@ -11,25 +15,34 @@ export default function ReceptionistLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
-          backgroundColor: Colors.white,
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: Colors.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: tabBarHeight,
+          paddingBottom: tabBarPaddingBottom,
+          paddingTop: 8,
+          shadowColor: Colors.shadow,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
+          elevation: 4,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: isSmallDevice ? 10 : 11,
+          fontWeight: '700',
+          letterSpacing: -0.1,
+          marginTop: 2,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>🏢</Text>
+          title: 'Front Desk',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="receptionist" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -37,38 +50,59 @@ export default function ReceptionistLayout() {
         name="patients"
         options={{
           title: 'Patients',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>👥</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="users" size={20} color={color} />
+            </View>
           ),
         }}
       />
       <Tabs.Screen
         name="appointments"
         options={{
-          title: 'Appointments',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>📅</Text>
+          title: 'Desk Schedule',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="calendar" size={20} color={color} />
+            </View>
           ),
         }}
       />
       <Tabs.Screen
         name="payments"
         options={{
-          title: 'Payments',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>💳</Text>
+          title: 'Billing',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="card" size={20} color={color} />
+            </View>
           ),
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          title: 'More',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>⚙️</Text>
+          title: 'Settings',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="gear" size={20} color={color} />
+            </View>
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconActive: {
+    backgroundColor: Colors.primarySubtle,
+  },
+});

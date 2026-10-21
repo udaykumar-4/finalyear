@@ -1,4 +1,13 @@
 const Prescription = require('../models/prescription');
+const cacheService = require('../services/cache/cacheService');
+
+const invalidatePrescriptionCaches = (rx) => {
+  cacheService.del('analytics:global');
+  if (!rx) return;
+  if (rx.doctorId) cacheService.del(`analytics:doctor:${rx.doctorId}`);
+  if (rx.therapistId) cacheService.del(`analytics:therapist:${rx.therapistId}`);
+  if (rx.patientId) cacheService.del(`analytics:patient:${rx.patientId}`);
+};
 
 // @desc    Create new prescription
 // @route   POST /api/prescriptions
@@ -15,6 +24,7 @@ const createPrescription = async (req, res) => {
     });
 
     const createdPrescription = await prescription.save();
+    invalidatePrescriptionCaches(createdPrescription);
     res.status(201).json(createdPrescription);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -79,6 +89,7 @@ const updatePrescriptionProgress = async (req, res) => {
         prescription.status = 'in-progress';
       }
       const updatedPrescription = await prescription.save();
+      invalidatePrescriptionCaches(updatedPrescription);
       res.json(updatedPrescription);
     } else {
       res.status(404).json({ message: 'Prescription not found' });

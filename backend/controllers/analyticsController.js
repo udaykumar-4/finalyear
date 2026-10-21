@@ -12,7 +12,9 @@ const getGlobalOutcomes = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized as an admin for clinic-wide analytics' });
     }
 
-    const data = await outcomeAnalyticsService.getGlobalOutcomes();
+    const timeRange = req.query.timeRange || 'all';
+    const forceRefresh = req.query.refresh === 'true';
+    const data = await outcomeAnalyticsService.getGlobalOutcomes(timeRange, { forceRefresh });
 
     // Audit log
     await AIAuditLog.create({

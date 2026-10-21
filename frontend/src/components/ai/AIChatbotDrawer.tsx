@@ -1,35 +1,187 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Trash2, Bot, User, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Send,
+  Sparkles,
+  Trash2,
+  Bot,
+  User as UserIcon,
+  AlertCircle,
+  BookOpen,
+  ArrowRight,
+  ShieldCheck,
+} from 'lucide-react';
 import { aiService, ChatMessage } from '../../services/aiService';
 import Button from '../common/Button';
 
 export interface AIChatbotDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  userRole?: string;
+  userName?: string;
+  onOpenTreatmentRecommendation?: () => void;
 }
 
-const DEFAULT_SUGGESTIONS = [
-  'What are the five actions of Panchakarma?',
-  'How should I prepare for Abhyanga therapy?',
-  'What diet balances aggravated Pitta dosha?',
-  'What are the guidelines after Shirodhara?',
-];
+interface FormattedMessageProps {
+  text: string;
+  isUser: boolean;
+  onOpenRecommendations?: () => void;
+}
 
-export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClose }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      sender: 'assistant',
-      text: 'Namaste! I am your AyurSutra Ayurvedic Wellness Assistant. How may I assist your Panchakarma therapy journey today?',
-    },
-  ]);
+/**
+ * Clean markdown-aware formatter that parses bold (**...**), bullet lists (•),
+ * and classical section headers without displaying raw asterisk syntax.
+ */
+const FormattedMessage: React.FC<FormattedMessageProps> = ({
+  text = '',
+  isUser,
+  onOpenRecommendations,
+}) => {
+  if (isUser) {
+    return <span>{text || ''}</span>;
+  }
+
+  const safeText = typeof text === 'string' ? text : String(text || '');
+  if (!safeText) return null;
+
+  // Detect whether text mentions therapies/recommendations
+  const mentionsTherapy =
+    onOpenRecommendations &&
+    (safeText.toLowerCase().includes('basti') ||
+      safeText.toLowerCase().includes('panchakarma') ||
+      safeText.toLowerCase().includes('therapy') ||
+      safeText.toLowerCase().includes('treatment') ||
+      safeText.toLowerCase().includes('recommend'));
+
+  const lines = safeText.split('\n');
+
+  const renderFormattedLine = (line: string, lineIndex: number) => {
+    if (!line.trim()) {
+      return <div key={lineIndex} style={{ height: '0.5rem' }} />;
+    }
+
+    // Parse **bold** parts in the line
+    const parts = line.split(/(\*\*[^*]+\*\*)/g);
+
+    const formattedParts = parts.map((part, partIndex) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const innerText = part.slice(2, -2);
+        return (
+          <strong key={partIndex} style={{ fontWeight: 700, color: 'var(--color-slate-900)' }}>
+            {innerText}
+          </strong>
+        );
+      }
+      return <span key={partIndex}>{part}</span>;
+    });
+
+    const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
+    const isHeader = line.includes('🌿 **') || line.includes('🥗 **') || line.includes('🧘 **');
+
+    return (
+      <div
+        key={lineIndex}
+        style={{
+          marginTop: isHeader ? '0.5rem' : isBullet ? '0.25rem' : '0.125rem',
+          paddingLeft: isBullet ? '0.5rem' : 0,
+          lineHeight: 1.55,
+        }}
+      >
+        {formattedParts}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div>{lines.map((l, i) => renderFormattedLine(l, i))}</div>
+
+      {mentionsTherapy && (
+        <div
+          style={{
+            marginTop: '0.875rem',
+            paddingTop: '0.75rem',
+            borderTop: '1px solid var(--color-slate-100)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+          }}
+        >
+          <span style={{ fontSize: '0.6875rem', color: '#4A6B56', fontWeight: 600 }}>
+            Want tailored options for your symptoms?
+          </span>
+          <button
+            type="button"
+            onClick={onOpenRecommendations}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              padding: '0.25rem 0.5rem',
+              borderRadius: '6px',
+              backgroundColor: '#E8F5E9',
+              color: '#1E3F2B',
+              border: '1px solid #C8E6C9',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Sparkles size={12} />
+            <span>AI Treatment Recommendations</span>
+            <ArrowRight size={10} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface SuggestionItem {
+  label: string;
+  query: string;
+  icon: string;
+}
+
+export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({
+  isOpen,
+  onClose,
+  userRole = 'patient',
+  userName = '',
+  onOpenTreatmentRecommendation,
+}) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showQuickPrompts, setShowQuickPrompts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Initialize Welcome Message
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const welcomeText =
+        userRole === 'patient'
+          ? `Namaste${userName ? ` ${userName}` : ''}! 🌿 I am your AyurSutra Ayurvedic Wellness Assistant.\n\nPowered by AyurSutra's Curated Knowledge Engine, I can guide you on classical Panchakarma therapies, therapeutic diets (Pathya), therapy preparation & aftercare, and answer questions about your active health profile.`
+          : `Hello${userName ? ` Dr. ${userName}` : ''}! 🌿 I am your AyurSutra Clinical Decision & Protocol Assistant.\n\nAsk me about classical Panchakarma indications, contraindications, classical Samhita references, aftercare regimens, or clinic operational guidance.`;
+
+      setMessages([
+        {
+          sender: 'assistant',
+          text: welcomeText,
+          timestamp: new Date().toISOString(),
+          isPersonalized: false,
+        },
+      ]);
+    }
+  }, [isOpen, userRole, userName]);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,23 +189,31 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
     }
   }, [isOpen, messages]);
 
-  if (!isOpen) return null;
-
   const handleSendMessage = async (textToSend?: string) => {
-    const text = textToSend || inputText;
-    if (!text.trim() || isLoading) return;
+    const text = (textToSend || inputText).trim();
+    if (!text || isLoading) return;
 
-    const userMsg: ChatMessage = { sender: 'user', text };
+    const userMsg: ChatMessage = {
+      sender: 'user',
+      text,
+      timestamp: new Date().toISOString(),
+    };
     setMessages((prev) => [...prev, userMsg]);
     setInputText('');
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await aiService.sendMessage(text);
+      const res = await aiService.sendMessage(text, conversationId);
+
+      if (res.conversationId) {
+        setConversationId(res.conversationId);
+      }
+
       const assistantMsg: ChatMessage = {
         sender: 'assistant',
         text: res.response,
+        timestamp: new Date().toISOString(),
         isPersonalized: res.isPersonalized,
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -64,14 +224,41 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
     }
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
+    if (conversationId) {
+      try {
+        await aiService.deleteConversation(conversationId);
+      } catch {
+        // Non-critical
+      }
+    }
+    setConversationId(undefined);
     setMessages([
       {
         sender: 'assistant',
-        text: 'Chat history cleared. What questions can I answer about your Ayurvedic wellness plan?',
+        text: 'Conversation history cleared. What questions can I answer about your Ayurvedic wellness plan?',
+        timestamp: new Date().toISOString(),
       },
     ]);
   };
+
+  const roleSuggestions: SuggestionItem[] =
+    userRole === 'patient'
+      ? [
+          { label: 'Back Pain Relief', query: 'What treatments are recommended for back pain & stiffness?', icon: '🌿' },
+          { label: 'Post-Therapy Diet', query: 'What diet should I follow after therapy?', icon: '🥗' },
+          { label: 'Abhyanga Preparation', query: 'How do I prepare for Abhyanga massage?', icon: '💆' },
+          { label: 'Ashwagandha Benefits', query: 'What are the benefits of Ashwagandha?', icon: '🌱' },
+          { label: 'The Three Doshas', query: 'What are the three doshas and how do they balance health?', icon: '🧘' },
+        ]
+      : [
+          { label: 'Basti Indications', query: 'What are the classical indications for Basti therapy?', icon: '🌿' },
+          { label: 'Aftercare Protocols', query: 'Summarize standard Panchakarma aftercare protocols.', icon: '📋' },
+          { label: 'Shirodhara Objectives', query: 'Explain the therapeutic objectives of Shirodhara.', icon: '💆' },
+          { label: 'Samhita Citations', query: 'Show classical Samhita citations on Agni and Ama.', icon: '📖' },
+        ];
+
+  if (!isOpen) return null;
 
   return (
     <>
@@ -83,7 +270,7 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
           inset: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.4)',
           backdropFilter: 'blur(2px)',
-          zIndex: 80,
+          zIndex: 110,
         }}
       />
 
@@ -94,11 +281,11 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
           top: 0,
           right: 0,
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '460px',
           height: '100vh',
           backgroundColor: 'var(--color-white)',
           boxShadow: 'var(--shadow-xl)',
-          zIndex: 90,
+          zIndex: 120,
           display: 'flex',
           flexDirection: 'column',
           borderLeft: '1px solid var(--color-slate-200)',
@@ -107,12 +294,12 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
         {/* Header */}
         <div
           style={{
-            padding: '1.25rem 1.5rem',
+            padding: '1.125rem 1.25rem',
             borderBottom: '1px solid var(--color-slate-100)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'var(--color-slate-50)',
+            backgroundColor: '#FAF7F2',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -121,7 +308,7 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
                 width: '36px',
                 height: '36px',
                 borderRadius: 'var(--radius-md)',
-                background: 'linear-gradient(135deg, var(--color-emerald) 0%, var(--color-forest) 100%)',
+                background: 'linear-gradient(135deg, #1E3F2B 0%, #10B981 100%)',
                 color: 'var(--color-white)',
                 display: 'flex',
                 alignItems: 'center',
@@ -131,11 +318,11 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
               <Sparkles size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-forest)' }}>
-                Ayurvedic Assistant
+              <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#1E3F2B', margin: 0 }}>
+                AyurSutra Assistant
               </h2>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--color-slate-500)', fontWeight: 600 }}>
-                Clinical Knowledge & Wellness Guidance
+              <span style={{ fontSize: '0.6875rem', color: '#4A6B56', fontWeight: 600 }}>
+                Powered by Curated Knowledge Engine
               </span>
             </div>
           </div>
@@ -148,7 +335,10 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
                 padding: '0.375rem',
                 borderRadius: 'var(--radius-sm)',
                 color: 'var(--color-slate-400)',
+                cursor: 'pointer',
                 transition: 'color var(--transition-fast)',
+                border: 'none',
+                background: 'none',
               }}
             >
               <Trash2 size={16} />
@@ -160,11 +350,32 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
                 padding: '0.375rem',
                 borderRadius: 'var(--radius-sm)',
                 color: 'var(--color-slate-400)',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'none',
               }}
             >
               <X size={18} />
             </button>
           </div>
+        </div>
+
+        {/* Clinical Disclaimer Banner */}
+        <div
+          style={{
+            backgroundColor: '#FFFBEB',
+            borderBottom: '1px solid #FDE68A',
+            padding: '0.5rem 1rem',
+            fontSize: '0.6875rem',
+            color: '#92400E',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+          }}
+        >
+          <ShieldCheck size={13} color="#D97706" />
+          <span>Educational & Clinical Guidance • Clinician verification required.</span>
         </div>
 
         {/* Message Thread */}
@@ -176,7 +387,7 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            backgroundColor: 'var(--color-cream)',
+            backgroundColor: '#FAF7F2',
           }}
         >
           {messages.map((msg, idx) => {
@@ -196,8 +407,8 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
                       width: '28px',
                       height: '28px',
                       borderRadius: 'var(--radius-full)',
-                      backgroundColor: 'var(--color-sage)',
-                      color: 'var(--color-forest)',
+                      backgroundColor: '#E8F5E9',
+                      color: '#1E3F2B',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -210,18 +421,97 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
                 )}
                 <div
                   style={{
-                    maxWidth: '82%',
+                    maxWidth: '85%',
                     padding: '0.75rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: isUser ? 'var(--color-forest)' : 'var(--color-white)',
+                    borderRadius: '14px',
+                    backgroundColor: isUser ? '#1E3F2B' : 'var(--color-white)',
                     color: isUser ? 'var(--color-white)' : 'var(--color-slate-800)',
                     fontSize: '0.8125rem',
                     lineHeight: 1.5,
-                    boxShadow: 'var(--shadow-xs)',
-                    border: isUser ? 'none' : '1px solid var(--color-slate-200)',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                    border: isUser ? 'none' : '1px solid #E2EBE4',
                   }}
                 >
-                  {msg.text}
+                  {msg.isPersonalized && !isUser && (
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        color: '#1E3F2B',
+                        backgroundColor: '#E8F5E9',
+                        padding: '0.125rem 0.375rem',
+                        borderRadius: '4px',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
+                      <span>💡 Personalized using your AyurSutra record</span>
+                    </div>
+                  )}
+
+                  <FormattedMessage
+                    text={msg.text}
+                    isUser={isUser}
+                    onOpenRecommendations={onOpenTreatmentRecommendation}
+                  />
+
+                  {/* Starter Topics on Initial Welcome Message */}
+                  {idx === 0 && !isUser && messages.length === 1 && (
+                    <div style={{ marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #E2EBE4' }}>
+                      <div
+                        style={{
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          color: '#4A6B56',
+                          marginBottom: '0.5rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                        }}
+                      >
+                        <Sparkles size={12} color="#10B981" />
+                        <span>Quick Starter Topics</span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                        {roleSuggestions.map((sug, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => handleSendMessage(sug.query)}
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '0.3125rem 0.625rem',
+                              borderRadius: '20px',
+                              backgroundColor: '#FAF7F2',
+                              color: '#1E3F2B',
+                              border: '1px solid #D5E2D8',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3125rem',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#E8F5E9';
+                              e.currentTarget.style.borderColor = '#1E3F2B';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#FAF7F2';
+                              e.currentTarget.style.borderColor = '#D5E2D8';
+                            }}
+                          >
+                            <span>{sug.icon}</span>
+                            <span>{sug.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {isUser && (
                   <div
@@ -238,7 +528,7 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
                       marginTop: '0.25rem',
                     }}
                   >
-                    <User size={16} />
+                    <UserIcon size={16} />
                   </div>
                 )}
               </div>
@@ -246,13 +536,13 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
           })}
 
           {isLoading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-slate-400)', fontSize: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4A6B56', fontSize: '0.75rem' }}>
               <div
                 style={{
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--color-emerald)',
+                  backgroundColor: '#10B981',
                   animation: 'pulse 1s infinite',
                 }}
               />
@@ -282,41 +572,110 @@ export const AIChatbotDrawer: React.FC<AIChatbotDrawerProps> = ({ isOpen, onClos
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggestion Chips */}
-        <div style={{ padding: '0.75rem 1.25rem', backgroundColor: 'var(--color-white)', borderTop: '1px solid var(--color-slate-100)', display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-          {DEFAULT_SUGGESTIONS.map((sug, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => handleSendMessage(sug)}
+        {/* Optional Collapsible Quick Prompts bar (toggled via Sparkles button) */}
+        {showQuickPrompts && (
+          <div
+            style={{
+              padding: '0.5rem 1.25rem',
+              backgroundColor: '#FAF7F2',
+              borderTop: '1px solid #E2EBE4',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <div
               style={{
-                fontSize: '0.6875rem',
-                padding: '0.25rem 0.5rem',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: 'var(--color-slate-100)',
-                color: 'var(--color-slate-700)',
-                border: '1px solid var(--color-slate-200)',
-                transition: 'all var(--transition-fast)',
-                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                flex: 1,
+                overflowX: 'auto',
+                whiteSpace: 'nowrap',
+                paddingBottom: '2px',
               }}
             >
-              {sug}
+              {roleSuggestions.map((sug, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    handleSendMessage(sug.query);
+                    setShowQuickPrompts(false);
+                  }}
+                  style={{
+                    fontSize: '0.6875rem',
+                    padding: '0.25rem 0.625rem',
+                    borderRadius: '20px',
+                    backgroundColor: 'var(--color-white)',
+                    color: '#1E3F2B',
+                    border: '1px solid #D5E2D8',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>{sug.icon}</span>
+                  <span>{sug.label}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowQuickPrompts(false)}
+              title="Close suggested prompts"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-slate-400)',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <X size={14} />
             </button>
-          ))}
-        </div>
+          </div>
+        )}
 
         {/* Input Bar */}
-        <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--color-slate-200)', backgroundColor: 'var(--color-white)' }}>
+        <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid var(--color-slate-200)', backgroundColor: 'var(--color-white)' }}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            style={{ display: 'flex', gap: '0.5rem' }}
+            style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
           >
+            <button
+              type="button"
+              onClick={() => setShowQuickPrompts((prev) => !prev)}
+              title={showQuickPrompts ? 'Hide prompt ideas' : 'Show prompt ideas'}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: showQuickPrompts ? '#E8F5E9' : '#F1F5F9',
+                border: showQuickPrompts ? '1.5px solid #10B981' : '1px solid var(--color-slate-200)',
+                color: showQuickPrompts ? '#1E3F2B' : 'var(--color-slate-500)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Sparkles size={16} />
+            </button>
             <input
               type="text"
-              placeholder="Ask about therapies, diet, or doshas..."
+              placeholder="Ask about therapies, back pain, diet, or doshas..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               style={{

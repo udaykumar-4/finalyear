@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -13,15 +14,19 @@ import noteService from '../../services/noteService';
 import { Prescription } from '../../types/prescription';
 import { Note } from '../../types/note';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import ProgressBar from '../../components/ProgressBar';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import PatientTreatmentRecommendationModal from '../../components/PatientTreatmentRecommendationModal';
+import { useResponsive } from '../../constants/Layout';
 
 export default function PatientTreatmentScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -79,24 +84,40 @@ export default function PatientTreatmentScreen() {
       <Header title="My Treatment Plan" subtitle="Panchakarma Protocol & Progress" showLogout={true} />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
-        {/* 🌟 NEW ISOLATED AI FEATURE: Patient Treatment Recommendation Button */}
-        <Card style={{ backgroundColor: '#E8F5E9', borderColor: '#A5D6A7', marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.primary }}>🌿 AI Treatment Recommendations</Text>
-              <Text style={{ fontSize: 12, color: '#2E7D32', marginTop: 2 }}>Discover knowledge-based Panchakarma therapy options for your symptoms</Text>
+        {/* AI Treatment Recommendation Card */}
+        <Card style={styles.aiRecommendCard}>
+          <View style={styles.aiRecommendRow}>
+            <View style={styles.aiIconBadge}>
+              <Icon name="sparkle" size={18} color={Colors.primary} />
             </View>
-            <Button
-              title="Explore →"
+            <View style={styles.aiTextContainer}>
+              <Text style={styles.aiTitle}>AI Therapy Recommendations</Text>
+              <Text style={styles.aiSubtitle}>
+                Explore personalized Ayurvedic protocol suggestions based on your symptoms.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.exploreBtn}
               onPress={() => setShowRecommendationModal(true)}
-              size="small"
-              style={{ backgroundColor: Colors.primary }}
-            />
+              hitSlop={{ top: 8, bottom: 8, left: 10, right: 10 }}
+            >
+              <Text style={styles.exploreBtnText}>Explore</Text>
+              <Icon name="chevron-right" size={12} color={Colors.white} />
+            </TouchableOpacity>
           </View>
         </Card>
 
@@ -105,10 +126,15 @@ export default function PatientTreatmentScreen() {
             {/* Active Plan Card */}
             <Card style={styles.planCard}>
               <View style={styles.badgeRow}>
-                <Text style={styles.rxBadge}>ACTIVE PROTOCOL</Text>
-                <Text style={[styles.statusBadge, { backgroundColor: activeRx.status === 'completed' ? Colors.successBg : Colors.warningBg, color: activeRx.status === 'completed' ? Colors.success : Colors.warning }]}>
-                  {activeRx.status.toUpperCase()}
-                </Text>
+                <View style={styles.protocolBadge}>
+                  <Icon name="treatment" size={12} color={Colors.primary} />
+                  <Text style={styles.rxBadge}>ACTIVE PROTOCOL</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: activeRx.status === 'completed' ? Colors.success + '18' : Colors.warning + '18' }]}>
+                  <Text style={[styles.statusText, { color: activeRx.status === 'completed' ? Colors.success : Colors.warning }]}>
+                    {activeRx.status.toUpperCase()}
+                  </Text>
+                </View>
               </View>
 
               <Text style={styles.treatmentTitle}>{activeRx.treatment}</Text>
@@ -116,33 +142,45 @@ export default function PatientTreatmentScreen() {
               <ProgressBar
                 progress={activeRx.duration > 0 ? (activeRx.progressCompleted / activeRx.duration) * 100 : 0}
                 label={`Progress (${activeRx.progressCompleted} / ${activeRx.duration} sessions)`}
-                color={Colors.accent}
-                height={12}
+                color={Colors.primary}
+                height={10}
                 style={{ marginVertical: 12 }}
               />
 
               <View style={styles.gridInfo}>
                 <View style={styles.gridItem}>
-                  <Text style={styles.gridLabel}>👨‍⚕️ Prescribing Doctor</Text>
+                  <View style={styles.gridLabelRow}>
+                    <Icon name="doctor" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.gridLabel}>Prescribing Doctor</Text>
+                  </View>
                   <Text style={styles.gridValue}>
                     {(activeRx.doctorId && typeof activeRx.doctorId === 'object') ? activeRx.doctorId.full_name : 'Doctor'}
                   </Text>
                 </View>
 
                 <View style={styles.gridItem}>
-                  <Text style={styles.gridLabel}>🧘 Primary Therapist</Text>
+                  <View style={styles.gridLabelRow}>
+                    <Icon name="therapist" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.gridLabel}>Primary Therapist</Text>
+                  </View>
                   <Text style={styles.gridValue}>
                     {(activeRx.therapistId && typeof activeRx.therapistId === 'object') ? activeRx.therapistId.full_name : 'Therapist'}
                   </Text>
                 </View>
 
                 <View style={styles.gridItem}>
-                  <Text style={styles.gridLabel}>⏱️ Total Sessions</Text>
+                  <View style={styles.gridLabelRow}>
+                    <Icon name="clock" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.gridLabel}>Total Sessions</Text>
+                  </View>
                   <Text style={styles.gridValue}>{activeRx.duration} sessions</Text>
                 </View>
 
                 <View style={styles.gridItem}>
-                  <Text style={styles.gridLabel}>📅 Start Date</Text>
+                  <View style={styles.gridLabelRow}>
+                    <Icon name="calendar" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.gridLabel}>Start Date</Text>
+                  </View>
                   <Text style={styles.gridValue}>
                     {activeRx.createdAt ? new Date(activeRx.createdAt).toLocaleDateString() : 'N/A'}
                   </Text>
@@ -151,7 +189,10 @@ export default function PatientTreatmentScreen() {
 
               {activeRx.notes ? (
                 <View style={styles.protocolBox}>
-                  <Text style={styles.boxTitle}>📋 Doctor's Clinical Protocol & Notes</Text>
+                  <View style={styles.protocolHeader}>
+                    <Icon name="report" size={14} color={Colors.primary} />
+                    <Text style={styles.boxTitle}>Doctor's Clinical Protocol & Notes</Text>
+                  </View>
                   <Text style={styles.boxText}>{activeRx.notes}</Text>
                 </View>
               ) : null}
@@ -159,7 +200,10 @@ export default function PatientTreatmentScreen() {
 
             {/* Session Notes */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Therapist Consultation Notes</Text>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="document" size={15} color={Colors.primary} />
+                <Text style={styles.sectionTitle}>Therapist Consultation Notes</Text>
+              </View>
             </View>
 
             {notes.length === 0 ? (
@@ -170,9 +214,12 @@ export default function PatientTreatmentScreen() {
               notes.map((noteItem) => (
                 <Card key={noteItem._id} style={styles.noteCard}>
                   <View style={styles.noteHeader}>
-                    <Text style={styles.authorText}>
-                      📝 {(noteItem.authorId && typeof noteItem.authorId === 'object') ? `${noteItem.authorId.full_name}` : 'Medical Provider'}
-                    </Text>
+                    <View style={styles.authorRow}>
+                      <Icon name="user" size={12} color={Colors.primary} />
+                      <Text style={styles.authorText}>
+                        {(noteItem.authorId && typeof noteItem.authorId === 'object') ? `${noteItem.authorId.full_name}` : 'Medical Provider'}
+                      </Text>
+                    </View>
                     {noteItem.createdAt && (
                       <Text style={styles.dateText}>
                         {new Date(noteItem.createdAt).toLocaleDateString()}
@@ -186,14 +233,16 @@ export default function PatientTreatmentScreen() {
           </View>
         ) : (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🌿</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="treatment" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Active Treatment Plan</Text>
             <Text style={styles.emptyDesc}>You currently do not have an active Panchakarma prescription plan assigned.</Text>
           </Card>
         )}
       </ScrollView>
 
-      {/* 🌿 AI Treatment Recommendation Modal */}
+      {/* AI Treatment Recommendation Modal */}
       <PatientTreatmentRecommendationModal
         visible={showRecommendationModal}
         onClose={() => setShowRecommendationModal(false)}
@@ -210,141 +259,240 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+  },
+  aiRecommendCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginBottom: 16,
+    padding: 14,
+    borderLeftWidth: 3.5,
+    borderLeftColor: Colors.primary,
+  },
+  aiRecommendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aiIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aiTextContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  aiTitle: {
+    ...Typography.bodyMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  aiSubtitle: {
+    ...Typography.caption,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  exploreBtn: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    gap: 4,
+  },
+  exploreBtnText: {
+    ...Typography.caption,
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: Colors.white,
   },
   planCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    padding: 16,
   },
   badgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  protocolBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary + '10',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   rxBadge: {
-    fontSize: 11,
+    ...Typography.caption,
+    fontSize: 10.5,
     fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 0.5,
   },
   statusBadge: {
-    fontSize: 10,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  statusText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
   },
   treatmentTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    ...Typography.h2,
+    fontSize: 20,
     color: Colors.text,
     marginBottom: 4,
   },
   gridInfo: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 10,
+    marginTop: 8,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
   },
   gridItem: {
     width: '50%',
     marginBottom: 12,
   },
+  gridLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   gridLabel: {
+    ...Typography.caption,
     fontSize: 11,
-    fontWeight: '600',
     color: Colors.textSecondary,
   },
   gridValue: {
+    ...Typography.bodyMedium,
     fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
     marginTop: 2,
   },
   protocolBox: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
+    backgroundColor: Colors.surface,
+    borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    marginTop: 10,
+    marginTop: 6,
   },
-  notesBox: {
-    backgroundColor: '#fffbe6',
-    borderColor: '#ffe58f',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 10,
+  protocolHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
   },
   boxTitle: {
+    ...Typography.caption,
     fontSize: 12,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 4,
   },
   boxText: {
-    fontSize: 13,
+    ...Typography.body,
+    fontSize: 12.5,
     color: Colors.text,
     lineHeight: 18,
   },
   sectionHeader: {
     marginTop: 20,
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 15,
     color: Colors.text,
   },
   subCard: {
-    padding: 14,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
   emptyNotesText: {
+    ...Typography.caption,
     fontSize: 13,
     color: Colors.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
   },
   noteCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 4,
+    padding: 14,
   },
   noteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
   },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   authorText: {
+    ...Typography.caption,
     fontSize: 12,
     fontWeight: '700',
     color: Colors.primary,
   },
   dateText: {
+    ...Typography.caption,
     fontSize: 11,
-    color: Colors.textMuted,
+    color: Colors.textSecondary,
   },
   noteContent: {
+    ...Typography.body,
     fontSize: 13,
     color: Colors.text,
     lineHeight: 18,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',

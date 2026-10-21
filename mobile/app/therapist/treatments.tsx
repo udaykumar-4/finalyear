@@ -13,14 +13,18 @@ import { useAuth } from '../../context/AuthContext';
 import prescriptionService from '../../services/prescriptionService';
 import { Prescription } from '../../types/prescription';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import ProgressBar from '../../components/ProgressBar';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function TherapistTreatmentsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -73,7 +77,7 @@ export default function TherapistTreatmentsScreen() {
     try {
       await prescriptionService.updateProgress(rx._id, nextProgress);
       if (nextProgress >= rx.duration) {
-        Alert.alert('Treatment Completed! 🎉', `Panchakarma protocol "${rx.treatment}" marked as completed!`);
+        Alert.alert('Treatment Completed!', `Panchakarma protocol "${rx.treatment}" marked as completed!`);
       } else {
         Alert.alert('Session Logged', `Progress updated: ${nextProgress} of ${rx.duration} sessions done.`);
       }
@@ -94,14 +98,25 @@ export default function TherapistTreatmentsScreen() {
       <Header title="Assigned Treatments" subtitle="Panchakarma Protocols" showLogout={true} />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {prescriptions.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🌿</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="treatment" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Treatments Assigned</Text>
             <Text style={styles.emptyDesc}>You currently have no Panchakarma treatments assigned for session execution.</Text>
           </Card>
@@ -114,20 +129,34 @@ export default function TherapistTreatmentsScreen() {
             return (
               <Card key={rx._id} style={styles.rxCard}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.treatmentTitle}>🌿 {rx.treatment}</Text>
-                  <Text style={[styles.statusBadge, { backgroundColor: isFinished ? Colors.successBg : Colors.warningBg, color: isFinished ? Colors.success : Colors.warning }]}>
-                    {rx.status.toUpperCase()}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <View style={styles.treatmentIconBadge}>
+                      <Icon name="treatment" size={14} color={Colors.primary} />
+                    </View>
+                    <Text style={styles.treatmentTitle}>{rx.treatment}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: isFinished ? Colors.success + '18' : Colors.warning + '18' }]}>
+                    <Text style={[styles.statusText, { color: isFinished ? Colors.success : Colors.warning }]}>
+                      {rx.status.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
 
-                <Text style={styles.detailText}>👤 Patient: {pName}</Text>
-                <Text style={styles.detailText}>👨‍⚕️ Prescribed By: {docName}</Text>
+                <View style={styles.detailRow}>
+                  <Icon name="user" size={12} color={Colors.textSecondary} />
+                  <Text style={styles.detailText}>Patient: {pName}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Icon name="doctor" size={12} color={Colors.textSecondary} />
+                  <Text style={styles.detailText}>Prescribed By: {docName}</Text>
+                </View>
 
                 <ProgressBar
                   progress={rx.duration > 0 ? (rx.progressCompleted / rx.duration) * 100 : 0}
                   label={`Progress: ${rx.progressCompleted} / ${rx.duration} sessions`}
-                  color={isFinished ? Colors.success : Colors.accent}
-                  height={12}
+                  color={isFinished ? Colors.success : Colors.primary}
+                  height={10}
                   style={{ marginVertical: 10 }}
                 />
 
@@ -164,75 +193,113 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   rxCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  treatmentIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   treatmentTitle: {
-    fontSize: 18,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
   statusBadge: {
-    fontSize: 10,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  statusText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
   },
   detailText: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12,
     color: Colors.textSecondary,
-    marginBottom: 2,
   },
   planBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: Colors.surface,
     padding: 10,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
     marginTop: 6,
   },
   boxTitle: {
-    fontSize: 11,
+    ...Typography.caption,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 2,
   },
   boxText: {
+    ...Typography.body,
     fontSize: 12,
     color: Colors.text,
+    lineHeight: 17,
   },
   actionRow: {
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
   },
 });

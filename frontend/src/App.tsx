@@ -45,6 +45,7 @@ import ClinicalSupportModal from './components/ai/ClinicalSupportModal';
 import DiseasePredictionModal from './components/ai/DiseasePredictionModal';
 import PatientTreatmentRecommendationModal from './components/ai/PatientTreatmentRecommendationModal';
 import AIChatbotDrawer from './components/ai/AIChatbotDrawer';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -56,8 +57,8 @@ export const App: React.FC = () => {
   const [isPatientRecOpen, setIsPatientRecOpen] = useState(false);
 
   // Doctor AI modal parameters
-  const [clinicalSupportTarget, setClinicalSupportTarget] = useState<{ id: string; name: string } | null>(null);
-  const [diseasePredictionTarget, setDiseasePredictionTarget] = useState<{ id: string; name: string } | null>(null);
+  const [clinicalSupportTarget, setClinicalSupportTarget] = useState<{ id: string; name: string; condition?: string } | null>(null);
+  const [diseasePredictionTarget, setDiseasePredictionTarget] = useState<{ id: string; name: string; condition?: string } | null>(null);
   const [prescribeTargetPatientId, setPrescribeTargetPatientId] = useState<string | undefined>(undefined);
 
   if (isLoading) {
@@ -96,12 +97,12 @@ export const App: React.FC = () => {
   }
 
   // Open modal helpers
-  const handleOpenClinicalSupport = (patientId: string, patientName: string) => {
-    setClinicalSupportTarget({ id: patientId, name: patientName });
+  const handleOpenClinicalSupport = (patientId: string, patientName: string, patientCondition?: string) => {
+    setClinicalSupportTarget({ id: patientId, name: patientName, condition: patientCondition });
   };
 
-  const handleOpenDiseasePrediction = (patientId: string, patientName: string) => {
-    setDiseasePredictionTarget({ id: patientId, name: patientName });
+  const handleOpenDiseasePrediction = (patientId: string, patientName: string, patientCondition?: string) => {
+    setDiseasePredictionTarget({ id: patientId, name: patientName, condition: patientCondition });
   };
 
   const handleOpenPrescribe = (patientId: string) => {
@@ -217,7 +218,7 @@ export const App: React.FC = () => {
               />
             );
           case 'treatments':
-            return <PatientTreatmentsPage />;
+            return <PatientTreatmentsPage onOpenRecommendationModal={() => setIsPatientRecOpen(true)} />;
           case 'reports':
             return <PatientReportsPage />;
           case 'feedback':
@@ -298,6 +299,8 @@ export const App: React.FC = () => {
           onClose={() => setClinicalSupportTarget(null)}
           patientId={clinicalSupportTarget.id}
           patientName={clinicalSupportTarget.name}
+          patientCondition={clinicalSupportTarget.condition}
+          onOpenPrescribe={handleOpenPrescribe}
         />
       )}
 
@@ -307,6 +310,7 @@ export const App: React.FC = () => {
           onClose={() => setDiseasePredictionTarget(null)}
           patientId={diseasePredictionTarget.id}
           patientName={diseasePredictionTarget.name}
+          patientCondition={diseasePredictionTarget.condition}
         />
       )}
 
@@ -315,10 +319,15 @@ export const App: React.FC = () => {
         onClose={() => setIsPatientRecOpen(false)}
       />
 
-      <AIChatbotDrawer
+      <ErrorBoundary fallbackTitle="AyurSutra Assistant" onReset={() => setIsAIChatOpen(false)}>
+        <AIChatbotDrawer
         isOpen={isAIChatOpen}
+        userRole={user.role}
+        userName={user.full_name}
+        onOpenTreatmentRecommendation={() => setIsPatientRecOpen(true)}
         onClose={() => setIsAIChatOpen(false)}
       />
+      </ErrorBoundary>
     </>
   );
 };

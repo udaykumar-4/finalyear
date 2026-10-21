@@ -38,4 +38,6 @@ const chatConversationSchema = new Schema({
   messages: [messageSchema]
 }, { timestamps: true });
 
+chatConversationSchema.index({ userId: 1, updatedAt: -1 }, { background: true, name: 'idx_chatconversations_user_updated' });
+
 module.exports = mongoose.model('ChatConversation', chatConversationSchema);

@@ -1,5 +1,6 @@
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
+const cacheService = require('../services/cache/cacheService');
 
 // Helper function to generate a token
 const generateToken = (id) => {
@@ -29,6 +30,9 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
+      cacheService.delPattern('users:role:*');
+      cacheService.del('analytics:global');
+
       res.status(201).json({
         _id: user._id,
         full_name: user.full_name,

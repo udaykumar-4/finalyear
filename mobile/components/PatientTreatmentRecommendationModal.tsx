@@ -14,6 +14,7 @@ import Button from './Button';
 import Card from './Card';
 import patientTreatmentRecommendationService from '../services/patientTreatmentRecommendationService';
 import { PatientTreatmentRecommendationResponse } from '../types/patientTreatmentRecommendation';
+import { useResponsive } from '../constants/Layout';
 
 interface PatientTreatmentRecommendationModalProps {
   visible: boolean;
@@ -35,6 +36,7 @@ export const PatientTreatmentRecommendationModal: React.FC<PatientTreatmentRecom
   onClose,
   patientName,
 }) => {
+  const { insets, isTablet } = useResponsive();
   const router = useRouter();
 
   const [symptoms, setSymptoms] = useState('');
@@ -82,7 +84,12 @@ export const PatientTreatmentRecommendationModal: React.FC<PatientTreatmentRecom
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View
+          style={[
+            styles.modalContent,
+            isTablet && { maxWidth: 600, width: '100%', alignSelf: 'center' },
+          ]}
+        >
           {/* Header */}
           <View style={styles.headerRow}>
             <View style={styles.iconRing}>
@@ -97,7 +104,13 @@ export const PatientTreatmentRecommendationModal: React.FC<PatientTreatmentRecom
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Math.max(insets.bottom, 24) + 24 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Safety Notice */}
             <View style={styles.safetyNoticeCard}>
               <Text style={styles.safetyNoticeTitle}>ℹ️ EDUCATIONAL GUIDANCE ONLY</Text>

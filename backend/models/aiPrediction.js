@@ -33,4 +33,6 @@ const aiPredictionSchema = new Schema({
   }
 }, { timestamps: true });
 
+aiPredictionSchema.index({ patientId: 1, createdAt: -1 }, { background: true, name: 'idx_aipredictions_patient_created' });
+
 module.exports = mongoose.model('AIPrediction', aiPredictionSchema);

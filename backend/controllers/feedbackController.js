@@ -1,6 +1,7 @@
 const Feedback = require('../models/feedback');
 const User = require('../models/user');
 const Prescription = require('../models/prescription');
+const cacheService = require('../services/cache/cacheService');
 
 // @desc    Create new feedback
 // @route   POST /api/feedback
@@ -37,6 +38,13 @@ const createFeedback = async (req, res) => {
     });
 
     const savedFeedback = await newFeedback.save();
+
+    // Invalidate analytics caches
+    cacheService.del('analytics:global');
+    if (savedFeedback.doctorId) cacheService.del(`analytics:doctor:${savedFeedback.doctorId}`);
+    if (savedFeedback.therapistId) cacheService.del(`analytics:therapist:${savedFeedback.therapistId}`);
+    cacheService.del(`analytics:patient:${savedFeedback.patientId}`);
+
     res.status(201).json(savedFeedback);
 
   } catch (error) {

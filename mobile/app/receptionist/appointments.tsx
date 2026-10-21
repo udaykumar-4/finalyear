@@ -15,16 +15,20 @@ import userService from '../../services/userService';
 import { Appointment, AppointmentStatus } from '../../types/appointment';
 import { User } from '../../types/user';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
 import SmartSchedulingModal from '../../components/SmartSchedulingModal';
 import BookAppointmentModal from '../../components/BookAppointmentModal';
 import { categorizeAppointmentDate } from '../../utils/appointmentDateUtils';
+import { useResponsive } from '../../constants/Layout';
 
 export default function ReceptionistAppointmentsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -138,25 +142,25 @@ export default function ReceptionistAppointmentsScreen() {
     <View style={styles.container}>
       <Header title="Clinic Appointments" subtitle="Reception Schedule & Booking Desk" showLogout={true} />
 
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding, maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center' }]}>
         <Button
-          title="+ Book New Appointment"
+          title="+ Book Consultation"
           onPress={() => setShowBookModal(true)}
           variant="primary"
           size="medium"
-          style={{ width: '48%' }}
+          style={{ width: '48.5%' }}
         />
         <Button
-          title="⚡ Smart Slot Optimizer"
+          title="Slot Optimizer"
           onPress={() => setShowOptimizerModal(true)}
           variant="secondary"
           size="medium"
-          style={{ width: '48%' }}
+          style={{ width: '48.5%' }}
         />
       </View>
 
       {/* Select Patient Selector for Receptionist */}
-      <View style={styles.patientSelectorRow}>
+      <View style={[styles.patientSelectorRow, { paddingHorizontal: horizontalPadding, maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center' }]}>
         <Text style={styles.selectLabel}>Booking Patient:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {patients.map((p) => (
@@ -167,9 +171,11 @@ export default function ReceptionistAppointmentsScreen() {
                 setSelectedPatientId(p._id);
                 setSelectedPatientName(p.full_name);
               }}
+              activeOpacity={0.8}
             >
+              <Icon name="user" size={12} color={selectedPatientId === p._id ? Colors.white : Colors.textSecondary} />
               <Text style={[styles.patientChipText, selectedPatientId === p._id && styles.activePatientChipText]}>
-                👤 {p.full_name}
+                {p.full_name}
               </Text>
             </TouchableOpacity>
           ))}
@@ -177,44 +183,60 @@ export default function ReceptionistAppointmentsScreen() {
       </View>
 
       {/* Segmented Filter Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, filterTab === 'today' && styles.activeTabItem]}
-          onPress={() => setFilterTab('today')}
-        >
-          <Text style={[styles.tabText, filterTab === 'today' && styles.activeTabText]}>
-            Today
-          </Text>
-        </TouchableOpacity>
+      <View style={[styles.tabBarWrapper, { maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, filterTab === 'today' && styles.activeTabItem]}
+            onPress={() => setFilterTab('today')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filterTab === 'today' && styles.activeTabText]}>
+              Today
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, filterTab === 'upcoming' && styles.activeTabItem]}
-          onPress={() => setFilterTab('upcoming')}
-        >
-          <Text style={[styles.tabText, filterTab === 'upcoming' && styles.activeTabText]}>
-            Upcoming
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, filterTab === 'upcoming' && styles.activeTabItem]}
+            onPress={() => setFilterTab('upcoming')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filterTab === 'upcoming' && styles.activeTabText]}>
+              Upcoming
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, filterTab === 'all' && styles.activeTabItem]}
-          onPress={() => setFilterTab('all')}
-        >
-          <Text style={[styles.tabText, filterTab === 'all' && styles.activeTabText]}>
-            All ({appointments.length})
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, filterTab === 'all' && styles.activeTabItem]}
+            onPress={() => setFilterTab('all')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filterTab === 'all' && styles.activeTabText]}>
+              All ({appointments.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {filteredAppts.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>📅</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="calendar" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Appointments Found</Text>
             <Text style={styles.emptyDesc}>No clinic appointments match the selected filter.</Text>
           </Card>
@@ -222,38 +244,67 @@ export default function ReceptionistAppointmentsScreen() {
           filteredAppts.map((item) => (
             <Card key={item._id} style={styles.apptCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.patientName}>
-                  👤 {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
-                </Text>
-                <Text style={[styles.statusBadge, getStatusStyle(item.status)]}>
-                  {item.status.toUpperCase()}
+                <View style={styles.patientRow}>
+                  <View style={styles.patientAvatar}>
+                    <Icon name="user" size={14} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.patientName}>
+                    {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
+                  </Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: getBadgeBg(item.status) }]}>
+                  <Text style={[styles.statusBadgeText, { color: getBadgeColor(item.status) }]}>
+                    {item.status.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="treatment" size={12} color={Colors.primary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Treatment: </Text>
+                  {item.treatment}
                 </Text>
               </View>
 
-              <Text style={styles.itemDetail}>🌿 Treatment: {item.treatment}</Text>
-              <Text style={styles.itemDetail}>
-                📅 Date & Time: {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
-              </Text>
-              <Text style={styles.itemDetail}>
-                👨‍⚕️ Doctor: {(item.doctorId && typeof item.doctorId === 'object') ? item.doctorId.full_name : 'N/A'}
-              </Text>
-              <Text style={styles.itemDetail}>
-                🧘 Therapist: {(item.therapistId && typeof item.therapistId === 'object') ? item.therapistId.full_name : 'N/A'}
-              </Text>
+              <View style={styles.detailRow}>
+                <Icon name="calendar" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Schedule: </Text>
+                  {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="doctor" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Doctor: </Text>
+                  {(item.doctorId && typeof item.doctorId === 'object') ? item.doctorId.full_name : 'N/A'}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="therapist" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Therapist: </Text>
+                  {(item.therapistId && typeof item.therapistId === 'object') ? item.therapistId.full_name : 'N/A'}
+                </Text>
+              </View>
 
               {/* Payment & Status Control Actions */}
               <View style={styles.actionSection}>
                 <View style={styles.paymentRow}>
                   <Text style={styles.costText}>
-                    Fee: ₹{item.cost || 1500} {item.status === 'cancelled' ? '(Cancelled - No Fee Due)' : ''}
+                    Fee: ₹{item.cost || 1500} {item.status === 'cancelled' ? '(Cancelled)' : ''}
                   </Text>
                   {item.status !== 'cancelled' && (
                     <Button
-                      title={item.isPaid ? '✓ PAID' : 'Mark Paid'}
+                      title={item.isPaid ? 'PAID' : 'Mark Paid'}
                       onPress={() => handleTogglePayment(item._id, !!item.isPaid)}
                       loading={updatingId === item._id}
                       size="small"
                       variant={item.isPaid ? 'outline' : 'primary'}
+                      style={{ minWidth: 90 }}
                     />
                   )}
                 </View>
@@ -309,17 +360,31 @@ export default function ReceptionistAppointmentsScreen() {
   );
 }
 
-const getStatusStyle = (status: AppointmentStatus) => {
+const getBadgeBg = (status: AppointmentStatus) => {
   switch (status) {
     case 'completed':
-      return { backgroundColor: Colors.successBg, color: Colors.success };
+      return Colors.success + '18';
     case 'cancelled':
-      return { backgroundColor: Colors.errorBg, color: Colors.error };
+      return Colors.error + '18';
     case 'in-progress':
-      return { backgroundColor: Colors.warningBg, color: Colors.warning };
+      return Colors.warning + '18';
     case 'scheduled':
     default:
-      return { backgroundColor: Colors.primary + '20', color: Colors.primary };
+      return Colors.primary + '15';
+  }
+};
+
+const getBadgeColor = (status: AppointmentStatus) => {
+  switch (status) {
+    case 'completed':
+      return Colors.success;
+    case 'cancelled':
+      return Colors.error;
+    case 'in-progress':
+      return Colors.warning;
+    case 'scheduled':
+    default:
+      return Colors.primary;
   }
 };
 
@@ -331,94 +396,109 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingTop: 12,
   },
   patientSelectorRow: {
-    paddingHorizontal: 16,
     marginTop: 10,
   },
   selectLabel: {
+    ...Typography.caption,
     fontSize: 12,
     fontWeight: '700',
     color: Colors.textSecondary,
     marginBottom: 6,
   },
   patientChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.white,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: 8,
+    minHeight: 34,
   },
   activePatientChip: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   patientChipText: {
+    ...Typography.caption,
     fontSize: 12,
-    color: Colors.text,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   activePatientChipText: {
     color: Colors.white,
     fontWeight: '700',
   },
+  tabBarWrapper: {
+    paddingTop: 10,
+  },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    marginTop: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: Colors.background,
-    marginRight: 6,
+    borderRadius: 9,
   },
   activeTabItem: {
     backgroundColor: Colors.primary,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...Typography.caption,
+    fontSize: 12.5,
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   activeTabText: {
     color: Colors.white,
-    fontWeight: '700',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   apptCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -426,29 +506,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   patientName: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
   statusBadge: {
-    fontSize: 10,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  statusBadgeText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
   },
   itemDetail: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
+    color: Colors.text,
+  },
+  detailLabel: {
     color: Colors.textSecondary,
-    marginBottom: 3,
   },
   actionSection: {
-    marginTop: 10,
+    marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
   },
   paymentRow: {
     flexDirection: 'row',
@@ -457,8 +563,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   costText: {
-    fontSize: 14,
-    fontWeight: '800',
+    ...Typography.caption,
+    fontSize: 13,
+    fontWeight: '700',
     color: Colors.text,
   },
   statusRow: {
@@ -467,9 +574,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...Typography.caption,
+    fontSize: 11.5,
     color: Colors.textSecondary,
+    fontWeight: '600',
   },
   btnGroup: {
     flexDirection: 'row',

@@ -17,6 +17,7 @@ import userService from '../services/userService';
 import appointmentService from '../services/appointmentService';
 import { SlotAvailability } from '../services/appointmentService';
 import { getTodayDateString, getLocalDateString } from '../utils/appointmentDateUtils';
+import { useResponsive } from '../constants/Layout';
 
 interface BookAppointmentModalProps {
   visible: boolean;
@@ -62,6 +63,7 @@ export default function BookAppointmentModal({
   patientId,
   patientName,
 }: BookAppointmentModalProps) {
+  const { insets, isSmallDevice, isTablet } = useResponsive();
   // Calendar date strip state (Next 14 days)
   const [calendarDates, setCalendarDates] = useState<
     Array<{ dateStr: string; dayName: string; dayNum: number; monthName: string; isToday: boolean }>
@@ -233,7 +235,12 @@ export default function BookAppointmentModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View
+          style={[
+            styles.modalContent,
+            isTablet && { maxWidth: 600, width: '100%', alignSelf: 'center' },
+          ]}
+        >
           {/* Header */}
           <View style={styles.modalHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -248,7 +255,13 @@ export default function BookAppointmentModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: Math.max(insets.bottom, 20) + 24 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* STEP 1: SELECT DATE (Calendar Picker Strip) */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
               <Text style={styles.stepTitle}>1. Select Date (Calendar)</Text>
@@ -374,7 +387,12 @@ export default function BookAppointmentModal({
                 return (
                   <TouchableOpacity
                     key={slot.time}
-                    style={[styles.slotBadge, slotStyle]}
+                    style={[
+                      styles.slotBadge,
+                      isSmallDevice && styles.slotBadgeSmall,
+                      isTablet && styles.slotBadgeTablet,
+                      slotStyle,
+                    ]}
                     onPress={() => setSelectedTime(slot.time)}
                   >
                     <Text style={[styles.slotTimeText, textStyle]}>{slot.time}</Text>
@@ -617,12 +635,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   slotBadge: {
-    width: '31%',
+    width: '31.3%',
     margin: '1%',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
+  },
+  slotBadgeSmall: {
+    width: '48%',
+  },
+  slotBadgeTablet: {
+    width: '23%',
   },
   availableSlot: {
     backgroundColor: Colors.successBg,

@@ -67,7 +67,7 @@ export const PatientTreatmentRecommendationModal: React.FC<PatientTreatmentRecom
         inset: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(3px)',
-        zIndex: 70,
+        zIndex: 100,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

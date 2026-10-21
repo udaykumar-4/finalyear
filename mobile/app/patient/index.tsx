@@ -16,6 +16,7 @@ import { Appointment } from '../../types/appointment';
 import { Prescription } from '../../types/prescription';
 import { User } from '../../types/user';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import ProgressBar from '../../components/ProgressBar';
@@ -24,14 +25,20 @@ import ErrorView from '../../components/ErrorView';
 import OutcomeAnalyticsCard from '../../components/OutcomeAnalyticsCard';
 import AIChatbotModal from '../../components/AIChatbotModal';
 import PatientTreatmentRecommendationModal from '../../components/PatientTreatmentRecommendationModal';
+import PrakritiDashboardCard from '../../components/PrakritiDashboardCard';
+import prakritiService from '../../services/prakritiService';
+import { PrakritiAssessmentRecord } from '../../types/prakriti';
 import { filterTodayAppointments, filterUpcomingAppointments } from '../../utils/appointmentDateUtils';
+import { useResponsive } from '../../constants/Layout';
 
 export default function PatientHomeScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [latestPrakriti, setLatestPrakriti] = useState<PrakritiAssessmentRecord | null>(null);
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,27 +61,27 @@ export default function PatientHomeScreen() {
     if (!user) return;
     setError(null);
     try {
-      const [apptsData, rxData] = await Promise.all([
+      const [apptsData, rxData, prakritiData] = await Promise.all([
         appointmentService.getAppointments({ patientId: user._id }),
         prescriptionService.getByPatientId(user._id),
+        prakritiService.getLatestAssessment().catch(() => null),
       ]);
       setAppointments(apptsData);
       setPrescriptions(rxData);
+      setLatestPrakriti(prakritiData);
 
       // Fetch assigned doctor if exists
-      if (user.assignedDoctor) {
-        const docId = (user.assignedDoctor && typeof user.assignedDoctor === 'object') ? user.assignedDoctor._id : user.assignedDoctor;
-        if (docId) {
-          try {
-            const doc = await userService.getUserById(docId);
-            setAssignedDoctor(doc);
-          } catch {
-            // Non-fatal if assigned doctor fetch fails
-          }
+      const docId = typeof user.assignedDoctor === 'object' ? (user.assignedDoctor as any)?._id : user.assignedDoctor;
+      if (docId) {
+        try {
+          const docData = await userService.getUserById(docId);
+          setAssignedDoctor(docData);
+        } catch {
+          // Non-critical
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load home dashboard.');
+      setError(err.message || 'Failed to load patient dashboard.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -83,10 +90,8 @@ export default function PatientHomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (user && user.role === 'patient') {
-        fetchData();
-      }
-    }, [user])
+      fetchData();
+    }, [user?._id])
   );
 
   const onRefresh = () => {
@@ -94,128 +99,164 @@ export default function PatientHomeScreen() {
     fetchData();
   };
 
-  if (authLoading || (loading && !refreshing)) {
-    return <LoadingScreen message="Welcome to AyurSutra..." />;
+  if (loading && !refreshing) {
+    return <LoadingScreen message="Loading Your Healing Sanctuary..." />;
   }
 
-  // Filter Today's & Upcoming Appointments using timezone-safe date utils
-  const todayAppts = filterTodayAppointments(appointments, true);
-  const upcomingAppts = filterUpcomingAppointments(appointments, true);
-
+  // Active Panchakarma Treatment
   const activeRx = prescriptions.find((p) => p.status === 'in-progress') || prescriptions[0];
-  const therapistName = activeRx && (activeRx.therapistId && typeof activeRx.therapistId === 'object') ? activeRx.therapistId.full_name : 'Assigned Therapist';
-  const doctorName = activeRx && (activeRx.doctorId && typeof activeRx.doctorId === 'object') ? activeRx.doctorId.full_name : (assignedDoctor?.full_name || 'Assigned Doctor');
+  const doctorName = typeof activeRx?.doctorId === 'object' ? activeRx.doctorId.full_name : assignedDoctor?.full_name || 'Assigned Physician';
+  const therapistName = typeof activeRx?.therapistId === 'object' ? activeRx.therapistId.full_name : 'Assigned Therapist';
+
+  // Appointments categorization
+  const todayAppts = filterTodayAppointments(appointments);
+  const upcomingAppts = filterUpcomingAppointments(appointments);
 
   return (
     <View style={styles.container}>
       <Header
-        title={`Namaste, ${user?.full_name || 'Patient'} 🌿`}
-        subtitle={`Patient ID: #${user?._id.slice(-6)}`}
+        title={`Namaste, ${user?.full_name?.split(' ')[0] || 'Patient'}`}
+        subtitle="Your Classical Ayurvedic Healing Journey"
         showLogout={true}
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
+        showsVerticalScrollIndicator={false}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
-        {/* Compact Health Vitals Bar (Consolidated to avoid header redundancy) */}
+        {/* Compact Health Vitals Ribbon */}
         <View style={styles.vitalsBar}>
-          <Text style={styles.vitalsBarText}>
-            Age: {user?.age || 'N/A'} • Gender: {user?.gender || 'N/A'} • Blood: {user?.bloodGroup || 'N/A'}
-          </Text>
+          <View style={styles.vitalsLeft}>
+            <Text style={styles.vitalsIcon}>♥</Text>
+            <Text style={styles.vitalsBarText}>
+              Age: <Text style={styles.vitalsBold}>{user?.age || 'N/A'}</Text> • Gender: <Text style={styles.vitalsBold}>{user?.gender || 'N/A'}</Text> • Blood: <Text style={styles.vitalsBold}>{user?.bloodGroup || 'N/A'}</Text>
+            </Text>
+          </View>
           {user?.condition ? (
-            <Text style={styles.vitalsConditionText}>Clinical Focus: {user.condition}</Text>
+            <View style={styles.conditionPill}>
+              <Text style={styles.vitalsConditionText}>{user.condition}</Text>
+            </View>
           ) : null}
         </View>
 
-        {/* 🌟 PHASE 3 ADDITIVE FEATURE: AI Wellness Assistant Floating Banner */}
+        {/* AI Wellness Assistant Banner */}
         <TouchableOpacity
           style={styles.aiChatCard}
           onPress={() => setShowChatModal(true)}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           <View style={styles.aiChatLeft}>
-            <Text style={styles.aiChatIcon}>🤖</Text>
-            <View>
-              <Text style={styles.aiChatTitle}>Ask AyurSutra AI Assistant</Text>
-              <Text style={styles.aiChatSub}>Personalized diet, therapy care & wellness guidance</Text>
+            <View style={styles.aiIconBubble}>
+              <Text style={styles.aiChatIcon}>✦</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiChatTitle}>AyurSutra Clinical Assistant</Text>
+              <Text style={styles.aiChatSub}>Ask about your therapy diet, aftercare & herbs</Text>
             </View>
           </View>
-          <Text style={styles.aiChatArrow}>Ask →</Text>
+          <View style={styles.aiChatArrowBadge}>
+            <Text style={styles.aiChatArrow}>Ask →</Text>
+          </View>
         </TouchableOpacity>
 
-        {/* 🌟 NEW ISOLATED AI FEATURE: AI Treatment Recommendations Banner */}
+        {/* AI Treatment Recommendations Banner */}
         <TouchableOpacity
-          style={[styles.aiChatCard, { backgroundColor: '#E8F5E9', borderColor: '#A5D6A7', marginTop: 10 }]}
+          style={styles.aiRecoCard}
           onPress={() => setShowRecommendationModal(true)}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           <View style={styles.aiChatLeft}>
-            <Text style={styles.aiChatIcon}>🌿</Text>
+            <View style={styles.aiRecoIconBubble}>
+              <Text style={styles.aiRecoIcon}>🪷</Text>
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.aiChatTitle, { color: Colors.primary }]}>🌿 AI Treatment Recommendations</Text>
-              <Text style={[styles.aiChatSub, { color: '#2E7D32' }]}>Get personalized Ayurvedic therapy guidance for your symptoms</Text>
+              <Text style={styles.aiRecoTitle}>Therapy Recommendations</Text>
+              <Text style={styles.aiRecoSub}>Explore tailored Panchakarma protocols for symptoms</Text>
             </View>
           </View>
-          <Text style={[styles.aiChatArrow, { color: Colors.primary }]}>Explore →</Text>
+          <Text style={styles.aiRecoArrow}>Explore →</Text>
         </TouchableOpacity>
+
+        {/* Discover Your Prakriti Assessment Card */}
+        <PrakritiDashboardCard
+          latestAssessment={latestPrakriti}
+          loading={loading && !refreshing}
+        />
 
         {/* Current Treatment Banner */}
         {activeRx ? (
           <Card style={styles.treatmentBanner}>
             <View style={styles.bannerHeader}>
-              <Text style={styles.bannerTag}>ACTIVE PANCHAKARMA PLAN</Text>
-              <Text style={styles.statusBadge}>{activeRx.status.toUpperCase()}</Text>
+              <Text style={styles.bannerTag}>ACTIVE PANCHAKARMA PROTOCOL</Text>
+              <View style={styles.statusBadgeWrapper}>
+                <Text style={styles.statusBadge}>{activeRx.status.toUpperCase()}</Text>
+              </View>
             </View>
             <Text style={styles.treatmentName}>{activeRx.treatment}</Text>
             <ProgressBar
               progress={activeRx.duration > 0 ? activeRx.progressCompleted / activeRx.duration : 0}
-              label={`Sessions Progress (${activeRx.progressCompleted} of ${activeRx.duration} completed)`}
-              color={Colors.accent}
+              label={`Sessions Completed: ${activeRx.progressCompleted} of ${activeRx.duration}`}
+              color={Colors.accentDark}
             />
 
             <View style={styles.careTeamRow}>
               <View style={styles.teamMember}>
-                <Text style={styles.teamLabel}>👨‍⚕️ Doctor</Text>
+                <Text style={styles.teamLabel}>Physician</Text>
                 <Text style={styles.teamValue}>{doctorName}</Text>
               </View>
               <View style={styles.teamMember}>
-                <Text style={styles.teamLabel}>🧘 Therapist</Text>
+                <Text style={styles.teamLabel}>Therapist</Text>
                 <Text style={styles.teamValue}>{therapistName}</Text>
               </View>
             </View>
           </Card>
         ) : (
           <View style={styles.emptyInlineContainer}>
-            <Text style={styles.emptyInlineText}>No active Panchakarma plan assigned.</Text>
+            <Text style={styles.emptyInlineText}>No active Panchakarma plan currently assigned.</Text>
           </View>
         )}
 
         {/* Personal Outcome Analytics Dashboard */}
         <OutcomeAnalyticsCard role="patient" />
 
-        {/* Today's Appointments Section */}
+        {/* Today's Consultations Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Appointment</Text>
+          <Text style={styles.sectionTitle}>Today's Schedule</Text>
+          <TouchableOpacity onPress={() => router.push('/patient/appointments')}>
+            <Text style={styles.seeAllText}>All Appointments →</Text>
+          </TouchableOpacity>
         </View>
+
         {todayAppts.length > 0 ? (
           todayAppts.map((item) => (
             <Card key={item._id} style={styles.todayCard}>
               <View style={styles.cardTop}>
-                <Text style={styles.cardBadgeToday}>TODAY AT {item.appointment_time}</Text>
-                <Text style={[styles.paidStatus, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
+                <View style={styles.timePill}>
+                  <Text style={styles.cardBadgeToday}>TODAY • {item.appointment_time}</Text>
+                </View>
+                <Text style={[styles.paidStatus, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textTertiary : Colors.warning) }]}>
                   {item.isPaid ? '✓ PAID' : (item.status === 'cancelled' ? 'CANCELLED' : 'UNPAID')}
                 </Text>
               </View>
-              <Text style={styles.cardTitle}>🌿 {item.treatment}</Text>
+              <Text style={styles.cardTitle}>{item.treatment}</Text>
               <Text style={styles.cardSub}>Status: {item.status.toUpperCase()}</Text>
             </Card>
           ))
         ) : (
           <View style={styles.emptyInlineContainer}>
-            <Text style={styles.emptyInlineText}>No appointments scheduled for today.</Text>
+            <Text style={styles.emptyInlineText}>No sessions scheduled for today.</Text>
           </View>
         )}
 
@@ -223,7 +264,7 @@ export default function PatientHomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
           <TouchableOpacity onPress={() => router.push('/patient/appointments')}>
-            <Text style={styles.seeAllText}>See All →</Text>
+            <Text style={styles.seeAllText}>View All →</Text>
           </TouchableOpacity>
         </View>
         {upcomingAppts.length > 0 ? (
@@ -231,9 +272,11 @@ export default function PatientHomeScreen() {
             <Card key={item._id} style={styles.upcomingCard}>
               <View style={styles.cardTop}>
                 <Text style={styles.cardDateText}>
-                  📅 {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
+                  {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
                 </Text>
-                <Text style={styles.statusBadgeSmall}>{item.status.toUpperCase()}</Text>
+                <View style={styles.statusBadgeSmallWrapper}>
+                  <Text style={styles.statusBadgeSmall}>{item.status.toUpperCase()}</Text>
+                </View>
               </View>
               <Text style={styles.cardTitleSmall}>{item.treatment}</Text>
             </Card>
@@ -246,55 +289,71 @@ export default function PatientHomeScreen() {
 
         {/* Notifications & Tips */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Clinic Notifications</Text>
+          <Text style={styles.sectionTitle}>Ayurvedic Lifestyle Reminder</Text>
         </View>
         <Card style={styles.noticeCard}>
-          <Text style={styles.noticeTitle}>🔔 Panchakarma Care Reminder</Text>
+          <Text style={styles.noticeTitle}>Post-Therapy Care Protocol</Text>
           <Text style={styles.noticeBody}>
-            Please drink warm water and avoid cold food after your therapy session for optimal detoxification results.
+            Drink warm herbal infusion water (Usnodaka) and avoid direct exposure to air conditioning or wind for 2 hours post Panchakarma therapy.
           </Text>
         </Card>
 
         {/* Quick Actions Grid */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>Quick Services</Text>
         </View>
         <View style={styles.quickGrid}>
           <TouchableOpacity
             style={styles.quickCard}
             onPress={() => router.push('/patient/appointments')}
+            activeOpacity={0.75}
           >
-            <Text style={styles.quickIcon}>📅</Text>
+            <View style={styles.quickIconBadge}>
+              <Text style={styles.quickIcon}>◫</Text>
+            </View>
             <Text style={styles.quickTitle}>Book Session</Text>
+            <Text style={styles.quickSub}>Schedule visit</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickCard}
             onPress={() => router.push('/patient/treatment')}
+            activeOpacity={0.75}
           >
-            <Text style={styles.quickIcon}>🌿</Text>
-            <Text style={styles.quickTitle}>View Plan</Text>
+            <View style={styles.quickIconBadge}>
+              <Text style={styles.quickIcon}>🪷</Text>
+            </View>
+            <Text style={styles.quickTitle}>Treatment Plan</Text>
+            <Text style={styles.quickSub}>Active protocol</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickCard}
             onPress={() => router.push('/patient/report')}
+            activeOpacity={0.75}
           >
-            <Text style={styles.quickIcon}>📄</Text>
-            <Text style={styles.quickTitle}>Full Report</Text>
+            <View style={styles.quickIconBadge}>
+              <Text style={styles.quickIcon}>◰</Text>
+            </View>
+            <Text style={styles.quickTitle}>Full Analytics</Text>
+            <Text style={styles.quickSub}>Clinical metrics</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickCard}
             onPress={() => router.push('/patient/feedback')}
+            activeOpacity={0.75}
           >
-            <Text style={styles.quickIcon}>⭐</Text>
-            <Text style={styles.quickTitle}>Give Feedback</Text>
+            <View style={styles.quickIconBadge}>
+              <Text style={styles.quickIcon}>★</Text>
+            </View>
+            <Text style={styles.quickTitle}>Feedback</Text>
+            <Text style={styles.quickSub}>Rate outcome</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* 🌟 AI Chatbot Modal */}
+      {/* AI Chatbot Modal */}
       <AIChatbotModal
         visible={showChatModal}
         onClose={() => setShowChatModal(false)}
@@ -302,7 +361,7 @@ export default function PatientHomeScreen() {
         userName={user?.full_name}
       />
 
-      {/* 🌿 AI Treatment Recommendation Modal */}
+      {/* AI Treatment Recommendation Modal */}
       <PatientTreatmentRecommendationModal
         visible={showRecommendationModal}
         onClose={() => setShowRecommendationModal(false)}
@@ -322,38 +381,67 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   vitalsBar: {
-    backgroundColor: Colors.glassBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: Colors.glassBorderSubtle,
+    borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  vitalsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  vitalsIcon: {
+    fontSize: 14,
+    color: Colors.accentDark,
+    marginRight: 8,
   },
   vitalsBarText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
-  vitalsConditionText: {
-    fontSize: 12,
+  vitalsBold: {
     fontWeight: '700',
-    color: Colors.primary,
-    marginTop: 2,
+    color: Colors.text,
+  },
+  conditionPill: {
+    backgroundColor: Colors.primarySubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  vitalsConditionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primaryDark,
   },
   emptyInlineContainer: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
     marginVertical: 6,
-    backgroundColor: Colors.glassPillBg,
+    backgroundColor: '#FFFFFF',
   },
   emptyInlineText: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: Colors.textMuted,
     fontWeight: '500',
   },
@@ -362,52 +450,109 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 16,
+    padding: 14,
     marginVertical: 6,
     shadowColor: Colors.shadowElevated,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: Colors.primaryDark,
   },
   aiChatLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  aiChatIcon: {
-    fontSize: 26,
+  aiIconBubble: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
+  aiChatIcon: {
+    fontSize: 18,
+    color: '#FFFFFF',
+  },
   aiChatTitle: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
-    color: Colors.white,
-    letterSpacing: -0.1,
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
   aiChatSub: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.88)',
+    fontSize: 11.5,
+    color: 'rgba(255, 255, 255, 0.85)',
     marginTop: 2,
     fontWeight: '500',
   },
+  aiChatArrowBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
   aiChatArrow: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.white,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    overflow: 'hidden',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  aiRecoCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  aiRecoIconBubble: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: Colors.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aiRecoIcon: {
+    fontSize: 18,
+  },
+  aiRecoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  aiRecoSub: {
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  aiRecoArrow: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginLeft: 8,
   },
   treatmentBanner: {
-    backgroundColor: Colors.successBg,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     borderWidth: 1,
+    padding: 16,
+    marginTop: 8,
   },
   bannerHeader: {
     flexDirection: 'row',
@@ -418,63 +563,51 @@ const styles = StyleSheet.create({
   bannerTag: {
     fontSize: 10,
     fontWeight: '800',
-    color: Colors.accentDark || '#15803d',
-    letterSpacing: 0.5,
+    color: Colors.primary,
+    letterSpacing: 0.6,
   },
-  statusBadge: {
-    backgroundColor: '#dcfce7',
-    color: '#15803d',
-    fontSize: 10,
-    fontWeight: '700',
+  statusBadgeWrapper: {
+    backgroundColor: Colors.successBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.successBorder,
+  },
+  statusBadge: {
+    color: Colors.success,
+    fontSize: 10,
+    fontWeight: '800',
   },
   treatmentName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: Colors.text,
-    marginBottom: 10,
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
   careTeamRow: {
     flexDirection: 'row',
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#dcfce7',
+    borderTopColor: Colors.borderLight,
   },
   teamMember: {
     flex: 1,
   },
   teamLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: Colors.textSecondary,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   teamValue: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
     marginTop: 2,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  emptyDesc: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -484,18 +617,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
+    ...Typography.h2,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   seeAllText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
     color: Colors.primary,
   },
   todayCard: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 4,
   },
   cardTop: {
     flexDirection: 'row',
@@ -503,26 +637,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  timePill: {
+    backgroundColor: Colors.primarySubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
   cardBadgeToday: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: Colors.primary,
+    color: Colors.primaryDark,
+    letterSpacing: 0.4,
   },
   paidStatus: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
   },
   cardSub: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   upcomingCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 4,
   },
   cardDateText: {
@@ -530,14 +674,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textSecondary,
   },
-  statusBadgeSmall: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    backgroundColor: Colors.primary + '15',
-    paddingHorizontal: 6,
+  statusBadgeSmallWrapper: {
+    backgroundColor: Colors.primarySubtle,
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
+  },
+  statusBadgeSmall: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: Colors.primaryDark,
+    letterSpacing: 0.4,
   },
   cardTitleSmall: {
     fontSize: 14,
@@ -545,27 +692,22 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginTop: 4,
   },
-  subCard: {
-    padding: 12,
-  },
-  noApptText: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    fontStyle: 'italic',
-  },
   noticeCard: {
-    backgroundColor: '#fffbe6',
-    borderColor: '#ffe58f',
+    backgroundColor: Colors.warningBg,
+    borderColor: Colors.warningBorder,
+    borderWidth: 1,
+    padding: 14,
   },
   noticeTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#d48806',
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.warning,
     marginBottom: 4,
+    letterSpacing: -0.1,
   },
   noticeBody: {
     fontSize: 12,
-    color: Colors.text,
+    color: '#78350F',
     lineHeight: 18,
   },
   quickGrid: {
@@ -574,27 +716,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   quickCard: {
-    width: '48%',
-    backgroundColor: Colors.white,
+    width: '48.5%',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
-    marginVertical: 6,
+    marginVertical: 5,
     borderWidth: 1,
     borderColor: Colors.border,
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
     elevation: 2,
   },
+  quickIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   quickIcon: {
-    fontSize: 26,
-    marginBottom: 6,
+    fontSize: 20,
+    color: Colors.primaryDark,
+    fontWeight: '700',
   },
   quickTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
+  },
+  quickSub: {
+    fontSize: 10.5,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

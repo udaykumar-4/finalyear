@@ -21,4 +21,6 @@ const documentSchema = new Schema({
   }
 }, { timestamps: true });
 
+documentSchema.index({ patientId: 1, createdAt: -1 }, { background: true, name: 'idx_documents_patient_created' });
+
 module.exports = mongoose.model('Document', documentSchema);

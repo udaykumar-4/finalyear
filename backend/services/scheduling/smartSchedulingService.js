@@ -1,5 +1,6 @@
 const Appointment = require('../../models/appointment');
 const User = require('../../models/user');
+const cacheService = require('../cache/cacheService');
 
 // Helper to convert time string (e.g. "10:00 AM", "14:30", "10:00") into minutes from midnight
 const parseTimeToMinutes = (timeStr) => {
@@ -101,75 +102,78 @@ class SmartSchedulingService {
    * Generate ranked alternative slot recommendations for a staff member
    */
   async getRecommendations(staffId, preferredDateStr, preferredTimeStr = '10:00 AM', durationMins = 60) {
-    const prefMins = parseTimeToMinutes(preferredTimeStr);
+    const cacheKey = `scheduling:recs:${staffId}:${preferredDateStr}:${preferredTimeStr}:${durationMins}`;
+    return await cacheService.wrap(cacheKey, 60, async () => {
+      const prefMins = parseTimeToMinutes(preferredTimeStr);
 
-    // Generate candidate slot grid from 08:00 AM (480) to 05:00 PM (1020) every 30 mins
-    const candidateTimes = [];
-    for (let mins = 480; mins <= 1020; mins += 30) {
-      candidateTimes.push(mins);
-    }
-
-    // Fetch staff existing appointments on that date to compute compact schedule bonus
-    const targetDate = new Date(preferredDateStr);
-    const startOfDay = new Date(targetDate.setUTCHours(0, 0, 0, 0));
-    const endOfDay = new Date(targetDate.setUTCHours(23, 59, 59, 999));
-
-    const existingAppts = await Appointment.find({
-      $or: [{ doctorId: staffId }, { therapistId: staffId }],
-      appointment_date: { $gte: startOfDay, $lte: endOfDay },
-      status: { $ne: 'cancelled' }
-    });
-
-    const existingMins = existingAppts.map(a => parseTimeToMinutes(a.appointment_time));
-
-    const recommendedSlots = [];
-    let isPreferredAvailable = false;
-
-    for (const candMins of candidateTimes) {
-      const candTimeFormatted = formatMinutesToTime(candMins);
-      const conflictCheck = await this.checkConflict(staffId, preferredDateStr, candTimeFormatted, durationMins);
-
-      if (!conflictCheck.hasConflict) {
-        if (candMins === prefMins) {
-          isPreferredAvailable = true;
-        }
-
-        // Deterministic Scoring Formula
-        // Base = 100 - 5 * |candMins - prefMins| / 15
-        const deviationSteps = Math.abs(candMins - prefMins) / 15;
-        let score = Math.max(10, Math.round(100 - (5 * deviationSteps)));
-
-        // Compact Schedule Bonus (+20 if directly adjacent to an existing appointment)
-        const isAdjacent = existingMins.some(m => Math.abs(m - candMins) === 60);
-        if (isAdjacent) {
-          score += 20;
-        }
-
-        // Rationale explanation
-        let rationale = 'Available slot';
-        if (candMins === prefMins) {
-          rationale = 'Exact match for requested time';
-        } else if (isAdjacent) {
-          rationale = `Optimal schedule gap (${Math.abs(candMins - prefMins)} mins from preferred)`;
-        } else {
-          rationale = `${Math.abs(candMins - prefMins)} mins from requested time`;
-        }
-
-        recommendedSlots.push({
-          time: candTimeFormatted,
-          score,
-          rationale
-        });
+      // Generate candidate slot grid from 08:00 AM (480) to 05:00 PM (1020) every 30 mins
+      const candidateTimes = [];
+      for (let mins = 480; mins <= 1020; mins += 30) {
+        candidateTimes.push(mins);
       }
-    }
 
-    // Sort recommended slots by score descending
-    recommendedSlots.sort((a, b) => b.score - a.score);
+      // Fetch staff existing appointments on that date to compute compact schedule bonus
+      const targetDate = new Date(preferredDateStr);
+      const startOfDay = new Date(targetDate.setUTCHours(0, 0, 0, 0));
+      const endOfDay = new Date(targetDate.setUTCHours(23, 59, 59, 999));
 
-    return {
-      requestedSlotAvailable: isPreferredAvailable,
-      recommendedSlots: recommendedSlots.slice(0, 5) // Return top 5 recommendations
-    };
+      const existingAppts = await Appointment.find({
+        $or: [{ doctorId: staffId }, { therapistId: staffId }],
+        appointment_date: { $gte: startOfDay, $lte: endOfDay },
+        status: { $ne: 'cancelled' }
+      });
+
+      const existingMins = existingAppts.map(a => parseTimeToMinutes(a.appointment_time));
+
+      const recommendedSlots = [];
+      let isPreferredAvailable = false;
+
+      for (const candMins of candidateTimes) {
+        const candTimeFormatted = formatMinutesToTime(candMins);
+        const conflictCheck = await this.checkConflict(staffId, preferredDateStr, candTimeFormatted, durationMins);
+
+        if (!conflictCheck.hasConflict) {
+          if (candMins === prefMins) {
+            isPreferredAvailable = true;
+          }
+
+          // Deterministic Scoring Formula
+          // Base = 100 - 5 * |candMins - prefMins| / 15
+          const deviationSteps = Math.abs(candMins - prefMins) / 15;
+          let score = Math.max(10, Math.round(100 - (5 * deviationSteps)));
+
+          // Compact Schedule Bonus (+20 if directly adjacent to an existing appointment)
+          const isAdjacent = existingMins.some(m => Math.abs(m - candMins) === 60);
+          if (isAdjacent) {
+            score += 20;
+          }
+
+          // Rationale explanation
+          let rationale = 'Available slot';
+          if (candMins === prefMins) {
+            rationale = 'Exact match for requested time';
+          } else if (isAdjacent) {
+            rationale = `Optimal schedule gap (${Math.abs(candMins - prefMins)} mins from preferred)`;
+          } else {
+            rationale = `${Math.abs(candMins - prefMins)} mins from requested time`;
+          }
+
+          recommendedSlots.push({
+            time: candTimeFormatted,
+            score,
+            rationale
+          });
+        }
+      }
+
+      // Sort recommended slots by score descending
+      recommendedSlots.sort((a, b) => b.score - a.score);
+
+      return {
+        requestedSlotAvailable: isPreferredAvailable,
+        recommendedSlots: recommendedSlots.slice(0, 5) // Return top 5 recommendations
+      };
+    });
   }
 }
 

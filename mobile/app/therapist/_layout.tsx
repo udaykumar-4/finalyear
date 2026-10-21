@@ -1,35 +1,48 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import Colors from '../../constants/Colors';
-import { Text } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useResponsive } from '../../constants/Layout';
+import Icon from '../../components/Icon';
 
 export default function TherapistLayout() {
+  const { tabBarHeight, tabBarPaddingBottom, isSmallDevice } = useResponsive();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.accentDark || '#15803d',
+        tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
-          backgroundColor: Colors.white,
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: Colors.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: tabBarHeight,
+          paddingBottom: tabBarPaddingBottom,
+          paddingTop: 8,
+          shadowColor: Colors.shadow,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
+          elevation: 4,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: isSmallDevice ? 10 : 11,
+          fontWeight: '700',
+          letterSpacing: -0.1,
+          marginTop: 2,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>🧘</Text>
+          title: 'Sessions',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="treatment" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -37,8 +50,10 @@ export default function TherapistLayout() {
         name="patients"
         options={{
           title: 'Patients',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>🧑‍⚕️</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="users" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -46,17 +61,21 @@ export default function TherapistLayout() {
         name="schedule"
         options={{
           title: 'Schedule',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>📅</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="calendar" size={20} color={color} />
+            </View>
           ),
         }}
       />
       <Tabs.Screen
         name="treatments"
         options={{
-          title: 'Treatments',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>🌿</Text>
+          title: 'Protocols',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="sparkle" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -64,11 +83,26 @@ export default function TherapistLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>⚙️</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconActive]}>
+              <Icon name="user" size={20} color={color} />
+            </View>
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconActive: {
+    backgroundColor: Colors.primarySubtle,
+  },
+});

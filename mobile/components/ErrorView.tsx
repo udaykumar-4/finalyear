@@ -12,12 +12,14 @@ export const ErrorView: React.FC<ErrorViewProps> = ({ message, onRetry }) => {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.icon}>⚠️</Text>
-        <Text style={styles.title}>Something Went Wrong</Text>
+        <View style={styles.iconCircle}>
+          <Text style={styles.icon}>✕</Text>
+        </View>
+        <Text style={styles.title}>Unable to Complete Request</Text>
         <Text style={styles.message}>{message}</Text>
         {onRetry && (
           <Button
-            title="Try Again"
+            title="Retry Connection"
             onPress={onRetry}
             variant="primary"
             size="small"
@@ -31,37 +33,56 @@ export const ErrorView: React.FC<ErrorViewProps> = ({ message, onRetry }) => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: Colors.errorBg,
-    borderColor: Colors.error,
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.errorBorder,
+    borderWidth: 1.5,
     borderRadius: 16,
-    padding: 20,
+    padding: 22,
     width: '100%',
     alignItems: 'center',
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.errorBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.errorBorder,
   },
   icon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 18,
+    color: Colors.error,
+    fontWeight: '800',
   },
   title: {
     fontSize: 16,
-    fontWeight: '700',
-    color: Colors.error,
+    fontWeight: '800',
+    color: Colors.text,
     marginBottom: 6,
+    letterSpacing: -0.2,
   },
   message: {
-    fontSize: 14,
-    color: Colors.text,
+    fontSize: 13,
+    color: Colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 18,
     marginBottom: 14,
   },
   btn: {
-    marginTop: 4,
+    minWidth: 140,
   },
 });
 

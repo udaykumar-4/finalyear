@@ -16,15 +16,19 @@ import { Appointment } from '../../types/appointment';
 import { Prescription } from '../../types/prescription';
 import { Feedback } from '../../types/feedback';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import StatCard from '../../components/StatCard';
 import Card from '../../components/Card';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
 import OutcomeAnalyticsCard from '../../components/OutcomeAnalyticsCard';
 import { filterTodayAppointments, filterUpcomingAppointments } from '../../utils/appointmentDateUtils';
+import { useResponsive } from '../../constants/Layout';
 
 export default function DoctorDashboardScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth, isSmallDevice } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -102,41 +106,74 @@ export default function DoctorDashboardScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
-        {/* Doctor Summary Banner */}
+        {/* Doctor Botanical Profile Banner */}
         <Card style={styles.profileCard}>
           <View style={styles.profileRow}>
             <View style={styles.avatarDoc}>
-              <Text style={styles.avatarText}>👨‍⚕️</Text>
+              <Icon name="doctor" size={24} color={Colors.primary} />
             </View>
             <View style={styles.profileTextContainer}>
-              <Text style={styles.docName}>{user?.full_name}</Text>
+              <View style={styles.nameBadgeRow}>
+                <Text style={styles.docName}>{user?.full_name}</Text>
+                <View style={styles.verifiedBadge}>
+                  <Text style={styles.verifiedText}>Physician</Text>
+                </View>
+              </View>
               <Text style={styles.docSpecialty}>{user?.designation || 'Senior Ayurvedic Physician'}</Text>
-              <Text style={styles.docMeta}>✉️ {user?.email} • 📞 {user?.phone || 'N/A'}</Text>
+              <View style={styles.contactRow}>
+                <View style={styles.contactItem}>
+                  <Icon name="mail" size={11} color={Colors.textSecondary} />
+                  <Text style={styles.docMeta} numberOfLines={1}>{user?.email}</Text>
+                </View>
+                {user?.phone ? (
+                  <View style={styles.contactItem}>
+                    <Icon name="phone" size={11} color={Colors.textSecondary} />
+                    <Text style={styles.docMeta}>{user?.phone}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           </View>
         </Card>
 
         {/* Key Metrics Grid */}
         <View style={styles.statsGrid}>
-          <StatCard title="Today's Consultations" value={todayAppts.length} icon="📅" color={Colors.primary} />
-          <StatCard title="Active Treatments" value={activeTreatments} icon="🌿" color={Colors.warning} />
-          <StatCard title="Completed Plans" value={completedTreatments} icon="✅" color={Colors.success} />
-          <StatCard title="Patient Rating" value={`★ ${avgRating}`} icon="⭐" color={Colors.secondary} />
+          <StatCard title="Today's Consults" value={todayAppts.length} icon="calendar" color={Colors.primary} />
+          <StatCard title="Active Treatments" value={activeTreatments} icon="leaf" color={Colors.warning} />
+          <StatCard title="Completed Plans" value={completedTreatments} icon="check" color={Colors.success} />
+          <StatCard title="Patient Rating" value={avgRating} icon="star" color={Colors.secondary} />
         </View>
 
-        {/* 🌟 PHASE 1 ADDITIVE FEATURE: Outcome Analytics Dashboard */}
+        {/* Outcome Analytics Dashboard */}
         <OutcomeAnalyticsCard role="doctor" />
 
         {/* Today's Consultations Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Consultations ({todayAppts.length})</Text>
-          <TouchableOpacity onPress={() => router.push('/doctor/appointments')}>
-            <Text style={styles.seeAllText}>View All →</Text>
+          <View style={styles.sectionTitleRow}>
+            <Icon name="clock" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Today's Consultations ({todayAppts.length})</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/doctor/appointments')}
+            hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+            style={styles.seeAllBtn}
+          >
+            <Text style={styles.seeAllText}>View All</Text>
+            <Icon name="chevron-right" size={12} color={Colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -148,20 +185,39 @@ export default function DoctorDashboardScreen() {
           todayAppts.map((item) => (
             <Card key={item._id} style={styles.todayCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.patientName}>
-                  👤 {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
-                </Text>
-                <Text style={styles.timeBadge}>{item.appointment_time}</Text>
+                <View style={styles.patientRow}>
+                  <View style={styles.patientAvatarPill}>
+                    <Icon name="user" size={14} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.patientName}>
+                    {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
+                  </Text>
+                </View>
+                <View style={styles.timeBadgeContainer}>
+                  <Text style={styles.timeBadge}>{item.appointment_time}</Text>
+                </View>
               </View>
-              <Text style={styles.cardDetail}>Treatment: {item.treatment}</Text>
-              <Text style={styles.cardDetail}>Status: {item.status.toUpperCase()}</Text>
+              <View style={styles.detailsRow}>
+                <Text style={styles.cardDetail}>
+                  <Text style={styles.detailLabel}>Treatment: </Text>
+                  {item.treatment}
+                </Text>
+                <View style={[styles.statusChip, { backgroundColor: item.status === 'completed' ? Colors.success + '15' : Colors.primary + '12' }]}>
+                  <Text style={[styles.statusText, { color: item.status === 'completed' ? Colors.success : Colors.primary }]}>
+                    {item.status.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
             </Card>
           ))
         )}
 
         {/* Upcoming Consultations Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+          <View style={styles.sectionTitleRow}>
+            <Icon name="calendar" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+          </View>
         </View>
         {upcomingAppts.length === 0 ? (
           <Card style={styles.subCard}>
@@ -171,11 +227,16 @@ export default function DoctorDashboardScreen() {
           upcomingAppts.slice(0, 3).map((item) => (
             <Card key={item._id} style={styles.upcomingCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.patientNameSmall}>
-                  👤 {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
-                </Text>
+                <View style={styles.patientRow}>
+                  <View style={styles.patientAvatarPill}>
+                    <Icon name="user" size={12} color={Colors.textSecondary} />
+                  </View>
+                  <Text style={styles.patientNameSmall}>
+                    {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
+                  </Text>
+                </View>
                 <Text style={styles.dateBadge}>
-                  {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
+                  {new Date(item.appointment_date).toLocaleDateString()} • {item.appointment_time}
                 </Text>
               </View>
               <Text style={styles.cardDetailSmall}>Service: {item.treatment}</Text>
@@ -185,9 +246,17 @@ export default function DoctorDashboardScreen() {
 
         {/* Patient Feedback Summary */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Patient Feedback</Text>
-          <TouchableOpacity onPress={() => router.push('/doctor/more')}>
-            <Text style={styles.seeAllText}>View All →</Text>
+          <View style={styles.sectionTitleRow}>
+            <Icon name="star" size={15} color={Colors.secondary} />
+            <Text style={styles.sectionTitle}>Recent Patient Feedback</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/doctor/more')}
+            hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+            style={styles.seeAllBtn}
+          >
+            <Text style={styles.seeAllText}>View All</Text>
+            <Icon name="chevron-right" size={12} color={Colors.primary} />
           </TouchableOpacity>
         </View>
         {feedbackList.length === 0 ? (
@@ -198,10 +267,18 @@ export default function DoctorDashboardScreen() {
           feedbackList.slice(0, 2).map((fb) => (
             <Card key={fb._id} style={styles.feedbackCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.feedbackAuthor}>
-                  👤 {(fb.patientId && typeof fb.patientId === 'object') ? fb.patientId.full_name : 'Patient'}
-                </Text>
-                <Text style={styles.starText}>★ {fb.doctorRating || fb.overallRating} / 5</Text>
+                <View style={styles.patientRow}>
+                  <View style={styles.patientAvatarPill}>
+                    <Icon name="user" size={12} color={Colors.textSecondary} />
+                  </View>
+                  <Text style={styles.feedbackAuthor}>
+                    {(fb.patientId && typeof fb.patientId === 'object') ? fb.patientId.full_name : 'Patient'}
+                  </Text>
+                </View>
+                <View style={styles.starRow}>
+                  <Icon name="star" size={13} color={Colors.secondary} />
+                  <Text style={styles.starText}>{fb.doctorRating || fb.overallRating} / 5</Text>
+                </View>
               </View>
               {fb.doctorFeedback ? (
                 <Text style={styles.feedbackText}>"{fb.doctorFeedback}"</Text>
@@ -223,11 +300,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   profileCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     marginBottom: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   profileRow: {
     flexDirection: 'row',
@@ -236,33 +315,63 @@ const styles = StyleSheet.create({
   avatarDoc: {
     width: 52,
     height: 52,
-    borderRadius: 26,
-    backgroundColor: Colors.primary + '15',
+    borderRadius: 14,
+    backgroundColor: Colors.primary + '12',
+    borderWidth: 1,
+    borderColor: Colors.primary + '25',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
-  avatarText: {
-    fontSize: 26,
-  },
   profileTextContainer: {
     flex: 1,
   },
+  nameBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   docName: {
-    fontSize: 18,
-    fontWeight: '800',
+    ...Typography.h3,
+    fontSize: 17,
     color: Colors.text,
   },
+  verifiedBadge: {
+    backgroundColor: Colors.primary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  verifiedText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+  },
   docSpecialty: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
     fontWeight: '600',
     color: Colors.primary,
     marginTop: 2,
   },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   docMeta: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 2,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -274,95 +383,169 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 15,
     color: Colors.text,
   },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    minHeight: 32,
+    paddingHorizontal: 4,
+  },
   seeAllText: {
-    fontSize: 13,
-    fontWeight: '600',
+    ...Typography.caption,
+    fontSize: 12,
+    fontWeight: '700',
     color: Colors.primary,
   },
   todayCard: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 3.5,
+    borderLeftColor: Colors.primary,
+    borderColor: Colors.border,
     marginVertical: 4,
+    padding: 14,
   },
   upcomingCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 4,
+    padding: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatarPill: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   patientName: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
   },
   patientNameSmall: {
-    fontSize: 14,
+    ...Typography.bodyMedium,
+    fontSize: 13.5,
     fontWeight: '700',
     color: Colors.text,
   },
+  timeBadgeContainer: {
+    backgroundColor: Colors.primary + '10',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary + '20',
+  },
   timeBadge: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11,
     fontWeight: '800',
     color: Colors.primary,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
   },
   dateBadge: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   cardDetail: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
+    color: Colors.text,
+  },
+  detailLabel: {
     color: Colors.textSecondary,
-    marginTop: 2,
+  },
+  statusChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
   },
   cardDetailSmall: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
   },
   subCard: {
-    padding: 12,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
   emptyText: {
+    ...Typography.caption,
     fontSize: 13,
     color: Colors.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
   },
   feedbackCard: {
-    backgroundColor: '#fffbe6',
-    borderColor: '#ffe58f',
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 4,
+    padding: 14,
   },
   feedbackAuthor: {
-    fontSize: 14,
+    ...Typography.bodyMedium,
+    fontSize: 13.5,
     fontWeight: '700',
     color: Colors.text,
   },
+  starRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   starText: {
+    ...Typography.caption,
     fontSize: 12,
     fontWeight: '800',
-    color: Colors.warning,
+    color: Colors.secondary,
   },
   feedbackText: {
+    ...Typography.body,
     fontSize: 12,
-    color: Colors.text,
+    color: Colors.textSecondary,
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: 6,
+    lineHeight: 17,
   },
 });

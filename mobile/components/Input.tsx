@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
 import Colors from '../constants/Colors';
+import Typography from '../constants/Typography';
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  helperText?: string;
   containerStyle?: ViewStyle;
 }
 
 export const Input: React.FC<InputProps> = ({
   label,
   error,
+  helperText,
   containerStyle,
   style,
   onFocus,
@@ -21,7 +24,11 @@ export const Input: React.FC<InputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={[styles.label, isFocused && styles.labelFocused]}>
+          {label}
+        </Text>
+      )}
       <TextInput
         style={[
           styles.input,
@@ -38,45 +45,56 @@ export const Input: React.FC<InputProps> = ({
           setIsFocused(false);
           onBlur && onBlur(e);
         }}
+        accessibilityLabel={label || props.placeholder}
         {...props}
       />
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text style={styles.errorText}>⚠ {error}</Text>
+      ) : helperText ? (
+        <Text style={styles.helperText}>{helperText}</Text>
+      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 14,
     width: '100%',
   },
   label: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textSecondary,
     marginBottom: 6,
-    letterSpacing: 0.2,
+    letterSpacing: -0.1,
+  },
+  labelFocused: {
+    color: Colors.primary,
   },
   input: {
-    backgroundColor: Colors.glassBg,
-    borderWidth: 1.5,
-    borderColor: Colors.glassBorderSubtle,
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 15,
     color: Colors.text,
+    minHeight: 46, // Touch Target
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
   },
   inputFocused: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.white,
+    borderColor: Colors.borderFocus,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     shadowColor: Colors.shadowElevated,
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   inputError: {
     borderColor: Colors.error,
@@ -87,6 +105,11 @@ const styles = StyleSheet.create({
     color: Colors.error,
     marginTop: 4,
     fontWeight: '600',
+  },
+  helperText: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    marginTop: 4,
   },
 });
 

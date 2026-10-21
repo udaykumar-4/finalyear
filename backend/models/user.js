@@ -71,4 +71,33 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+userSchema.index({ role: 1 }, { background: true, name: 'idx_users_role' });
+
+// Lifecycle hooks for automated cache invalidation
+userSchema.post('save', function(doc) {
+  try {
+    const cacheService = require('../services/cache/cacheService');
+    cacheService.delPattern('users:role:*');
+    cacheService.del('analytics:global');
+    if (doc._id) {
+      cacheService.del(`analytics:patient:${doc._id}`);
+      cacheService.delPattern(`availability:${doc._id}:*`);
+      cacheService.delPattern(`scheduling:recs:${doc._id}:*`);
+    }
+  } catch {}
+});
+
+userSchema.post(['deleteOne', 'findOneAndDelete'], function(doc) {
+  try {
+    const cacheService = require('../services/cache/cacheService');
+    cacheService.delPattern('users:role:*');
+    cacheService.del('analytics:global');
+    if (doc && doc._id) {
+      cacheService.del(`analytics:patient:${doc._id}`);
+      cacheService.delPattern(`availability:${doc._id}:*`);
+      cacheService.delPattern(`scheduling:recs:${doc._id}:*`);
+    }
+  } catch {}
+});
+
 module.exports = mongoose.model('User', userSchema);

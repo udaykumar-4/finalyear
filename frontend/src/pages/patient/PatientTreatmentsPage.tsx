@@ -7,13 +7,21 @@ import {
   Stethoscope,
   BookOpen,
   AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { prescriptionService } from '../../services/prescriptionService';
 import { Prescription } from '../../types/prescription';
 import Card from '../../components/common/Card';
+import Button from '../../components/common/Button';
 
-export const PatientTreatmentsPage: React.FC = () => {
+export interface PatientTreatmentsPageProps {
+  onOpenRecommendationModal?: () => void;
+}
+
+export const PatientTreatmentsPage: React.FC<PatientTreatmentsPageProps> = ({
+  onOpenRecommendationModal,
+}) => {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,13 +42,25 @@ export const PatientTreatmentsPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-slate-900)' }}>
-          My Panchakarma Treatment Journey
-        </h2>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-slate-500)' }}>
-          Personalized therapeutic stages, session timelines, and physician Pathya guidance
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-slate-900)' }}>
+            My Panchakarma Treatment Journey
+          </h2>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--color-slate-500)' }}>
+            Personalized therapeutic stages, session timelines, and physician Pathya guidance
+          </p>
+        </div>
+        {onOpenRecommendationModal && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onOpenRecommendationModal}
+            leftIcon={<Sparkles size={16} />}
+          >
+            AI Treatment Recommendations
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -55,6 +75,56 @@ export const PatientTreatmentsPage: React.FC = () => {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {/* Discovery Banner for Treatment Recommendations */}
+      {onOpenRecommendationModal && (
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderRadius: 'var(--radius-lg, 14px)',
+            backgroundColor: '#FAF7F2',
+            border: '1px solid #D5E2D8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                backgroundColor: '#E8F5E9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#1E3F2B',
+              }}
+            >
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#1E3F2B', margin: 0 }}>
+                Explore New Panchakarma Therapies
+              </h4>
+              <p style={{ fontSize: '0.8125rem', color: '#4A6B56', margin: '0.125rem 0 0 0' }}>
+                Use our AI Treatment Recommendation System to evaluate therapies for symptoms, joint pain, or stress.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenRecommendationModal}
+            rightIcon={<ArrowRight size={14} />}
+          >
+            Get Recommendations
+          </Button>
         </div>
       )}
 
@@ -99,15 +169,15 @@ export const PatientTreatmentsPage: React.FC = () => {
                     padding: '1rem',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-slate-200)',
-                    backgroundColor: pct >= 30 && pct < 85 ? 'var(--color-sage)' : 'var(--color-slate-50)',
+                    backgroundColor: pct >= 30 && pct < 80 ? 'var(--color-sage)' : 'var(--color-slate-50)',
                   }}
                 >
-                  <span className="badge badge-warning" style={{ marginBottom: '0.5rem' }}>Stage 2</span>
+                  <span className="badge badge-info" style={{ marginBottom: '0.5rem' }}>Stage 2</span>
                   <h4 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--color-slate-900)' }}>
-                    Pradhanakarma (Primary)
+                    Pradhanakarma (Principal Detox)
                   </h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-slate-600)', marginTop: '0.25rem', lineHeight: 1.4 }}>
-                    Main Shodhana evacuation therapy (e.g. Basti / Virechana) targeting deep biological roots.
+                    Active administration of {activeRx.treatment} to extract accumulated doshas from cellular channels.
                   </p>
                 </div>
 
@@ -116,48 +186,58 @@ export const PatientTreatmentsPage: React.FC = () => {
                     padding: '1rem',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-slate-200)',
-                    backgroundColor: pct >= 85 ? 'var(--color-sage)' : 'var(--color-slate-50)',
+                    backgroundColor: pct >= 80 ? 'var(--color-sage)' : 'var(--color-slate-50)',
                   }}
                 >
-                  <span className="badge badge-success" style={{ marginBottom: '0.5rem' }}>Stage 3</span>
+                  <span className="badge badge-info" style={{ marginBottom: '0.5rem' }}>Stage 3</span>
                   <h4 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--color-slate-900)' }}>
-                    Paschatkarma (Restorative)
+                    Paschatkarma (Restorative Rejuvenation)
                   </h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-slate-600)', marginTop: '0.25rem', lineHeight: 1.4 }}>
-                    Graduated dietary regimen (Peya, Vilepi, Yusha) and Rasayana for permanent tissue rejuvenation.
+                    Samsarjana Krama dietary reset, Rasayana replenishment, and rebuilding metabolic Agni.
                   </p>
                 </div>
               </div>
 
-              {/* Instructions and Plan */}
+              {/* Instructions and Regimen */}
               {activeRx.plan && (
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-cream)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-slate-200)' }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-forest)', marginBottom: '0.25rem' }}>
-                    Clinical Treatment Plan:
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-slate-700)', lineHeight: 1.5 }}>
+                <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-slate-50)' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-slate-900)', marginBottom: '0.25rem' }}>
+                    Physician Prescribed Regimen (Krama)
+                  </h4>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-slate-700)', lineHeight: 1.5 }}>
                     {activeRx.plan}
-                  </div>
+                  </p>
                 </div>
               )}
 
               {activeRx.notes && (
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-warning-bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-warning-border)' }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-warning)', marginBottom: '0.25rem' }}>
-                    Physician Pathya & Lifestyle Guidelines:
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-slate-800)', lineHeight: 1.5 }}>
-                    {activeRx.notes}
-                  </div>
+                <div style={{ padding: '0.875rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-sage)', border: '1px solid var(--color-sage-border)', fontSize: '0.8125rem', color: 'var(--color-forest)' }}>
+                  <strong>Doctor Clinical Notes:</strong> {activeRx.notes}
                 </div>
               )}
             </div>
           </Card>
         </div>
       ) : (
-        <Card padding="lg">
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-slate-400)' }}>
-            No active Panchakarma program currently recorded. Schedule a consultation to begin your regimen.
+        <Card title="Panchakarma Protocol Status">
+          <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--color-slate-400)' }}>
+            <Activity size={40} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+            <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-slate-700)' }}>
+              No Active Panchakarma Prescription Assigned
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--color-slate-500)', maxWidth: '420px', margin: '0.5rem auto 1.5rem' }}>
+              Your consulting Ayurvedic physician will prescribe a personalized treatment protocol after your clinical examination.
+            </p>
+            {onOpenRecommendationModal && (
+              <Button
+                variant="primary"
+                onClick={onOpenRecommendationModal}
+                leftIcon={<Sparkles size={16} />}
+              >
+                Explore Recommended Therapies
+              </Button>
+            )}
           </div>
         </Card>
       )}

@@ -15,14 +15,18 @@ import userService from '../../services/userService';
 import { Feedback } from '../../types/feedback';
 import { BlockedSlot } from '../../types/user';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function TherapistProfileScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading, updateUserInContext, logout } = useAuth();
   const router = useRouter();
 
@@ -99,7 +103,7 @@ export default function TherapistProfileScreen() {
     try {
       const updatedUser = await userService.unblockSlot(slotId);
       updateUserInContext(updatedUser);
-      Alert.alert('Slot Unblocked', 'Time slot restored.');
+      Alert.alert('Slot Unblocked', 'Time slot removed from blocked schedule.');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to unblock slot.');
     } finally {
@@ -115,7 +119,7 @@ export default function TherapistProfileScreen() {
         phone: phone.trim(),
       });
       updateUserInContext(updated);
-      Alert.alert('Profile Saved', 'Your therapist profile settings have been updated.');
+      Alert.alert('Profile Saved', 'Your therapist profile has been updated.');
     } catch (err: any) {
       Alert.alert('Save Failed', err.message || 'Failed to update profile.');
     } finally {
@@ -134,50 +138,69 @@ export default function TherapistProfileScreen() {
       <Header title="Therapist Profile" subtitle="Account & Availability Settings" showLogout={true} />
 
       {/* Segmented Control Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'feedback' && styles.activeTabItem]}
-          onPress={() => setActiveTab('feedback')}
-        >
-          <Text style={[styles.tabText, activeTab === 'feedback' && styles.activeTabText]}>
-            Reviews ({feedbackList.length})
-          </Text>
-        </TouchableOpacity>
+      <View style={[styles.tabBarWrapper, { maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'feedback' && styles.activeTabItem]}
+            onPress={() => setActiveTab('feedback')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === 'feedback' && styles.activeTabText]}>
+              Reviews ({feedbackList.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'slots' && styles.activeTabItem]}
-          onPress={() => setActiveTab('slots')}
-        >
-          <Text style={[styles.tabText, activeTab === 'slots' && styles.activeTabText]}>
-            Availability ({blockedSlots.length})
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'slots' && styles.activeTabItem]}
+            onPress={() => setActiveTab('slots')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === 'slots' && styles.activeTabText]}>
+              Availability ({blockedSlots.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'profile' && styles.activeTabItem]}
-          onPress={() => setActiveTab('profile')}
-        >
-          <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>
-            Profile
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'profile' && styles.activeTabItem]}
+            onPress={() => setActiveTab('profile')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>
+              Profile
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.accent]} />}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {activeTab === 'feedback' ? (
           <View>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Patient Reviews & Session Ratings</Text>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="star" size={15} color={Colors.secondary} />
+                <Text style={styles.sectionTitle}>Patient Reviews & Session Ratings</Text>
+              </View>
             </View>
 
             {feedbackList.length === 0 ? (
               <Card style={styles.emptyCard}>
-                <Text style={styles.emptyIcon}>⭐</Text>
+                <View style={styles.emptyIconCircle}>
+                  <Icon name="star" size={32} color={Colors.secondary} />
+                </View>
                 <Text style={styles.emptyTitle}>No Therapist Reviews Yet</Text>
                 <Text style={styles.emptyDesc}>Patient reviews submitted for your Panchakarma sessions will appear here.</Text>
               </Card>
@@ -185,10 +208,18 @@ export default function TherapistProfileScreen() {
               feedbackList.map((fb) => (
                 <Card key={fb._id} style={styles.fbCard}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.patientName}>
-                      👤 {(fb.patientId && typeof fb.patientId === 'object') ? fb.patientId.full_name : 'Patient'}
-                    </Text>
-                    <Text style={styles.ratingBadge}>★ {fb.therapistRating || fb.overallRating} / 5</Text>
+                    <View style={styles.patientRow}>
+                      <View style={styles.patientAvatar}>
+                        <Icon name="user" size={13} color={Colors.primary} />
+                      </View>
+                      <Text style={styles.patientName}>
+                        {(fb.patientId && typeof fb.patientId === 'object') ? fb.patientId.full_name : 'Patient'}
+                      </Text>
+                    </View>
+                    <View style={styles.ratingBadge}>
+                      <Icon name="star" size={12} color={Colors.secondary} />
+                      <Text style={styles.ratingBadgeText}>{fb.therapistRating || fb.overallRating} / 5</Text>
+                    </View>
                   </View>
 
                   {fb.therapistFeedback ? (
@@ -209,7 +240,10 @@ export default function TherapistProfileScreen() {
         ) : activeTab === 'slots' ? (
           <View>
             <Card style={styles.slotCard}>
-              <Text style={styles.cardTitle}>🚫 Block Therapy Time Slot</Text>
+              <View style={styles.cardTitleRow}>
+                <Icon name="clock" size={15} color={Colors.warning} />
+                <Text style={styles.cardTitle}>Block Therapy Time Slot</Text>
+              </View>
               <Text style={styles.cardSub}>Restricts scheduling during your personal unavailable hours.</Text>
 
               <Input
@@ -236,7 +270,10 @@ export default function TherapistProfileScreen() {
             </Card>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Your Blocked Slots ({blockedSlots.length})</Text>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="calendar" size={15} color={Colors.primary} />
+                <Text style={styles.sectionTitle}>Your Blocked Slots ({blockedSlots.length})</Text>
+              </View>
             </View>
 
             {blockedSlots.length === 0 ? (
@@ -247,9 +284,12 @@ export default function TherapistProfileScreen() {
               blockedSlots.map((slot) => (
                 <Card key={slot._id || slot.time} style={styles.slotItemCard}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.slotText}>
-                      📅 {new Date(slot.date).toLocaleDateString()} at {slot.time}
-                    </Text>
+                    <View style={styles.slotTimeRow}>
+                      <Icon name="clock" size={13} color={Colors.warning} />
+                      <Text style={styles.slotText}>
+                        {new Date(slot.date).toLocaleDateString()} at {slot.time}
+                      </Text>
+                    </View>
                     {slot._id && (
                       <Button
                         title="Unblock"
@@ -267,17 +307,20 @@ export default function TherapistProfileScreen() {
         ) : (
           <View>
             <Card style={styles.profileCard}>
-              <Text style={styles.cardTitle}>🧘 Therapist Profile Settings</Text>
+              <View style={styles.cardTitleRow}>
+                <Icon name="therapist" size={15} color={Colors.primary} />
+                <Text style={styles.cardTitle}>Therapist Profile Settings</Text>
+              </View>
 
               <Input
                 label="Full Name (Read-only)"
                 value={user?.full_name}
                 editable={false}
-                style={{ backgroundColor: Colors.background }}
+                style={{ backgroundColor: Colors.surface }}
               />
 
               <Input
-                label="Therapist Title / Designation"
+                label="Clinical Designation / Certification"
                 placeholder="Certified Panchakarma Therapist"
                 value={designation}
                 onChangeText={setDesignation}
@@ -292,7 +335,7 @@ export default function TherapistProfileScreen() {
               />
 
               <Button
-                title="Save Profile Settings"
+                title="Save Therapist Profile"
                 onPress={handleSaveProfile}
                 loading={savingProfile}
                 style={{ marginTop: 10 }}
@@ -300,7 +343,10 @@ export default function TherapistProfileScreen() {
             </Card>
 
             <Card style={styles.profileCard}>
-              <Text style={styles.cardTitle}>⚙️ Account Session</Text>
+              <View style={styles.cardTitleRow}>
+                <Icon name="gear" size={15} color={Colors.primary} />
+                <Text style={styles.cardTitle}>Account Session</Text>
+              </View>
               <Button
                 title="Sign Out of Therapist Portal"
                 onPress={logout}
@@ -320,129 +366,193 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  tabBarWrapper: {
+    paddingTop: 12,
+  },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: Colors.background,
-    marginRight: 6,
+    borderRadius: 9,
   },
   activeTabItem: {
     backgroundColor: Colors.primary,
   },
   tabText: {
+    ...Typography.caption,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   activeTabText: {
     color: Colors.white,
-    fontWeight: '700',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   sectionHeader: {
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 8,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 15,
     color: Colors.text,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.secondary + '18',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   fbCard: {
-    backgroundColor: '#fffbe6',
-    borderColor: '#ffe58f',
-    marginVertical: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   patientName: {
-    fontSize: 15,
+    ...Typography.bodyMedium,
+    fontSize: 14.5,
     fontWeight: '700',
     color: Colors.text,
   },
   ratingBadge: {
-    fontSize: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.secondary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  ratingBadgeText: {
+    ...Typography.caption,
+    fontSize: 11,
     fontWeight: '800',
-    color: Colors.warning,
+    color: Colors.secondary,
   },
   fbText: {
-    fontSize: 13,
+    ...Typography.body,
+    fontSize: 12.5,
     color: Colors.text,
     fontStyle: 'italic',
-    marginBottom: 4,
+    lineHeight: 18,
   },
   dateText: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textMuted,
+    marginTop: 6,
   },
   slotCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    padding: 14,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.text,
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     marginBottom: 4,
   },
-  cardSub: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 14,
+  cardTitle: {
+    ...Typography.h3,
+    fontSize: 15,
+    color: Colors.text,
   },
-  subCard: {
+  cardSub: {
+    ...Typography.caption,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+    marginBottom: 10,
+  },
+  slotItemCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 4,
     padding: 12,
   },
+  slotTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  slotText: {
+    ...Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.text,
+  },
+  subCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+  },
   emptyText: {
+    ...Typography.caption,
     fontSize: 13,
     color: Colors.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  slotItemCard: {
-    marginVertical: 4,
-  },
-  slotText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-  },
   profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 6,
+    padding: 14,
   },
 });

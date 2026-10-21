@@ -15,14 +15,18 @@ import userService from '../../services/userService';
 import authService from '../../services/authService';
 import { User, UserRole } from '../../types/user';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon, { IconName } from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function AdminUsersScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -177,7 +181,7 @@ export default function AdminUsersScreen() {
         designation: createDesignation.trim() || undefined,
       });
 
-      Alert.alert('User Created 🎉', `New ${createRole.toUpperCase()} account created.`);
+      Alert.alert('User Created', `New ${createRole.toUpperCase()} account created successfully.`);
       setShowCreateModal(false);
       setCreateName('');
       setCreateEmail('');
@@ -206,7 +210,7 @@ export default function AdminUsersScreen() {
     <View style={styles.container}>
       <Header title="User Management" subtitle="System Account Directory & Controls" showLogout={true} />
 
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding, maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center' }]}>
         <Button
           title="+ Create New Account"
           onPress={() => setShowCreateModal(true)}
@@ -215,7 +219,7 @@ export default function AdminUsersScreen() {
           style={{ width: '100%', marginBottom: 10 }}
         />
         <Input
-          placeholder="🔍 Search users by name, email, or role..."
+          placeholder="Search users by name, email, or role..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           containerStyle={{ marginBottom: 0 }}
@@ -223,29 +227,48 @@ export default function AdminUsersScreen() {
       </View>
 
       {/* Role Filter Chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleFilterRow}>
-        {rolesList.map((r) => (
-          <TouchableOpacity
-            key={r}
-            style={[styles.roleChip, selectedRoleFilter === r && styles.activeRoleChip]}
-            onPress={() => setSelectedRoleFilter(r)}
-          >
-            <Text style={[styles.roleChipText, selectedRoleFilter === r && styles.activeRoleChipText]}>
-              {r.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={[styles.filterWrapper, { maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center' }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.roleFilterRow}
+          contentContainerStyle={{ paddingHorizontal: horizontalPadding }}
+        >
+          {rolesList.map((r) => (
+            <TouchableOpacity
+              key={r}
+              style={[styles.roleChip, selectedRoleFilter === r && styles.activeRoleChip]}
+              onPress={() => setSelectedRoleFilter(r)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.roleChipText, selectedRoleFilter === r && styles.activeRoleChipText]}>
+                {r.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.secondary]} />}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {filteredUsers.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>👥</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="users" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Accounts Found</Text>
             <Text style={styles.emptyDesc}>No user accounts match the search or role criteria.</Text>
           </Card>
@@ -255,20 +278,32 @@ export default function AdminUsersScreen() {
             return (
               <Card key={u._id} style={styles.userCard}>
                 <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.userName}>{u.full_name}</Text>
-                    <Text style={styles.userEmail}>{u.email}</Text>
+                  <View style={styles.userRow}>
+                    <View style={styles.userAvatar}>
+                      <Icon name={getRoleIcon(u.role)} size={14} color={Colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.userName}>{u.full_name}</Text>
+                      <Text style={styles.userEmail}>{u.email}</Text>
+                    </View>
                   </View>
-                  <Text style={[styles.roleBadge, getRoleStyle(u.role)]}>
-                    {u.role.toUpperCase()}
-                  </Text>
+                  <View style={[styles.roleBadge, { backgroundColor: getRoleBadgeBg(u.role) }]}>
+                    <Text style={[styles.roleBadgeText, { color: getRoleBadgeColor(u.role) }]}>
+                      {u.role.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
 
                 {u.designation ? <Text style={styles.userMeta}>Title: {u.designation}</Text> : null}
                 <Text style={styles.userMeta}>Phone: {u.phone || 'N/A'}</Text>
-                <Text style={[styles.statusText, { color: isActive ? Colors.success : Colors.error }]}>
-                  ACCOUNT STATUS: {isActive ? 'ACTIVE ✓' : 'INACTIVE / BLOCKED 🚫'}
-                </Text>
+                <View style={styles.statusRow}>
+                  <Text style={styles.statusLabel}>Account Status: </Text>
+                  <View style={[styles.statusChip, { backgroundColor: isActive ? Colors.success + '15' : Colors.error + '15' }]}>
+                    <Text style={[styles.statusChipText, { color: isActive ? Colors.success : Colors.error }]}>
+                      {isActive ? 'ACTIVE' : 'INACTIVE / BLOCKED'}
+                    </Text>
+                  </View>
+                </View>
 
                 {/* Admin Controls Action Row */}
                 <View style={styles.actionRow}>
@@ -277,7 +312,7 @@ export default function AdminUsersScreen() {
                     onPress={() => handleOpenEditModal(u)}
                     size="small"
                     variant="outline"
-                    style={{ marginRight: 6 }}
+                    style={{ marginRight: 6, minWidth: 64 }}
                   />
 
                   <Button
@@ -286,7 +321,7 @@ export default function AdminUsersScreen() {
                     loading={actionUserId === u._id}
                     size="small"
                     variant={isActive ? 'outline' : 'primary'}
-                    style={{ marginRight: 6 }}
+                    style={{ marginRight: 6, minWidth: 92 }}
                   />
 
                   <Button
@@ -295,6 +330,7 @@ export default function AdminUsersScreen() {
                     loading={actionUserId === u._id}
                     size="small"
                     variant="danger"
+                    style={{ minWidth: 70 }}
                   />
                 </View>
               </Card>
@@ -308,15 +344,18 @@ export default function AdminUsersScreen() {
         <Modal
           visible={!!editingUser}
           transparent
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setEditingUser(null)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Edit Account Details</Text>
-                <TouchableOpacity onPress={() => setEditingUser(null)}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                <TouchableOpacity
+                  onPress={() => setEditingUser(null)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="close" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -334,6 +373,7 @@ export default function AdminUsersScreen() {
                       key={role}
                       style={[styles.roleSelectChip, editRole === role && styles.activeRoleSelectChip]}
                       onPress={() => setEditRole(role)}
+                      activeOpacity={0.8}
                     >
                       <Text style={[styles.roleSelectChipText, editRole === role && styles.activeRoleSelectChipText]}>
                         {role.toUpperCase()}
@@ -373,15 +413,18 @@ export default function AdminUsersScreen() {
       <Modal
         visible={showCreateModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowCreateModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create New User Account</Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <TouchableOpacity
+                onPress={() => setShowCreateModal(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Icon name="close" size={20} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -416,6 +459,7 @@ export default function AdminUsersScreen() {
                     key={role}
                     style={[styles.roleSelectChip, createRole === role && styles.activeRoleSelectChip]}
                     onPress={() => setCreateRole(role)}
+                    activeOpacity={0.8}
                   >
                     <Text style={[styles.roleSelectChipText, createRole === role && styles.activeRoleSelectChipText]}>
                       {role.toUpperCase()}
@@ -445,19 +489,51 @@ export default function AdminUsersScreen() {
   );
 }
 
-const getRoleStyle = (role: UserRole) => {
+const getRoleIcon = (role: UserRole): IconName => {
   switch (role) {
     case 'admin':
-      return { backgroundColor: Colors.secondary + '20', color: Colors.secondary };
+      return 'admin';
     case 'doctor':
-      return { backgroundColor: Colors.primary + '20', color: Colors.primary };
+      return 'doctor';
     case 'therapist':
-      return { backgroundColor: Colors.accent + '20', color: Colors.accentDark || '#15803d' };
+      return 'therapist';
     case 'receptionist':
-      return { backgroundColor: '#f59e0b20', color: '#d97706' };
+      return 'receptionist';
     case 'patient':
     default:
-      return { backgroundColor: Colors.border, color: Colors.textSecondary };
+      return 'user';
+  }
+};
+
+const getRoleBadgeBg = (role: UserRole) => {
+  switch (role) {
+    case 'admin':
+      return Colors.primary + '18';
+    case 'doctor':
+      return Colors.secondary + '18';
+    case 'therapist':
+      return Colors.accent + '18';
+    case 'receptionist':
+      return Colors.warning + '18';
+    case 'patient':
+    default:
+      return Colors.surface;
+  }
+};
+
+const getRoleBadgeColor = (role: UserRole) => {
+  switch (role) {
+    case 'admin':
+      return Colors.primary;
+    case 'doctor':
+      return Colors.secondary;
+    case 'therapist':
+      return Colors.accent;
+    case 'receptionist':
+      return Colors.warning;
+    case 'patient':
+    default:
+      return Colors.textSecondary;
   }
 };
 
@@ -467,27 +543,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   topBar: {
-    paddingHorizontal: 16,
     paddingTop: 12,
   },
+  filterWrapper: {
+    paddingVertical: 8,
+  },
   roleFilterRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    flexGrow: 0,
   },
   roleChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.white,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: Colors.border,
-    marginRight: 6,
+    marginRight: 8,
+    minHeight: 34,
+    justifyContent: 'center',
   },
   activeRoleChip: {
-    backgroundColor: Colors.secondary,
-    borderColor: Colors.secondary,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   roleChipText: {
+    ...Typography.caption,
     fontSize: 11,
     fontWeight: '700',
     color: Colors.textSecondary,
@@ -496,130 +576,178 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 6,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   userCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   userName: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
   },
   userEmail: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11.5,
     color: Colors.textSecondary,
-    marginTop: 1,
   },
   roleBadge: {
-    fontSize: 10,
-    fontWeight: '800',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  roleBadgeText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
   },
   userMeta: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginBottom: 3,
   },
-  statusText: {
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  statusLabel: {
+    ...Typography.caption,
     fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  statusChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusChipText: {
+    ...Typography.caption,
+    fontSize: 10,
     fontWeight: '800',
-    marginTop: 4,
   },
   actionRow: {
     flexDirection: 'row',
-    marginTop: 10,
+    justifyContent: 'flex-end',
+    marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(17, 35, 24, 0.45)',
     justifyContent: 'center',
     padding: 16,
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 17,
     color: Colors.text,
-  },
-  closeBtn: {
-    fontSize: 20,
-    color: Colors.textMuted,
-    padding: 4,
   },
   selectLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    ...Typography.caption,
+    fontSize: 12,
+    fontWeight: '700',
     color: Colors.text,
     marginBottom: 6,
+    marginTop: 4,
   },
   roleBtnGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 12,
   },
   roleSelectChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: Colors.background,
+    borderRadius: 6,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginRight: 6,
-    marginBottom: 6,
   },
   activeRoleSelectChip: {
-    backgroundColor: Colors.secondary,
-    borderColor: Colors.secondary,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   roleSelectChipText: {
+    ...Typography.caption,
     fontSize: 11,
-    color: Colors.text,
+    fontWeight: '700',
+    color: Colors.textSecondary,
   },
   activeRoleSelectChipText: {
-    fontWeight: '700',
     color: Colors.white,
   },
 });

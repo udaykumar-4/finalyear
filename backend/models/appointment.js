@@ -39,4 +39,39 @@ const appointmentSchema = new Schema({
   isPaid: { type: Boolean, default: false }
 }, { timestamps: true });
 
+appointmentSchema.index({ appointment_date: -1 }, { background: true, name: 'idx_appointments_date_desc' });
+appointmentSchema.index({ patientId: 1, appointment_date: -1, status: 1 }, { background: true, name: 'idx_appointments_patient_date_status' });
+appointmentSchema.index({ doctorId: 1, appointment_date: -1, status: 1 }, { background: true, name: 'idx_appointments_doctor_date_status' });
+appointmentSchema.index({ therapistId: 1, appointment_date: -1, status: 1 }, { background: true, name: 'idx_appointments_therapist_date_status' });
+
+// Lifecycle hooks for automated cache invalidation
+appointmentSchema.post('save', function(doc) {
+  try {
+    const cacheService = require('../services/cache/cacheService');
+    cacheService.delPattern('analytics:global*');
+    if (doc.doctorId) {
+      cacheService.del(`analytics:doctor:${doc.doctorId}`);
+      cacheService.delPattern(`availability:${doc.doctorId}:*`);
+      cacheService.delPattern(`scheduling:recs:${doc.doctorId}:*`);
+    }
+    if (doc.therapistId) {
+      cacheService.del(`analytics:therapist:${doc.therapistId}`);
+      cacheService.delPattern(`availability:${doc.therapistId}:*`);
+      cacheService.delPattern(`scheduling:recs:${doc.therapistId}:*`);
+    }
+    if (doc.patientId) {
+      cacheService.del(`analytics:patient:${doc.patientId}`);
+    }
+  } catch {}
+});
+
+appointmentSchema.post(['deleteOne', 'findOneAndDelete'], function() {
+  try {
+    const cacheService = require('../services/cache/cacheService');
+    cacheService.delPattern('analytics:global*');
+    cacheService.delPattern('availability:*');
+    cacheService.delPattern('scheduling:recs:*');
+  } catch {}
+});
+
 module.exports = mongoose.model('Appointment', appointmentSchema);

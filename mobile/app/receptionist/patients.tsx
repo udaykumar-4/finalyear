@@ -17,14 +17,18 @@ import appointmentService from '../../services/appointmentService';
 import { User } from '../../types/user';
 import { Appointment } from '../../types/appointment';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function ReceptionistPatientsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -101,7 +105,7 @@ export default function ReceptionistPatientsScreen() {
         address: regAddress.trim(),
       });
 
-      Alert.alert('Registration Successful 🎉', `Walk-in patient "${regName}" registered!`);
+      Alert.alert('Registration Successful', `Walk-in patient "${regName}" registered successfully!`);
       setShowRegModal(false);
       setRegName('');
       setRegEmail('');
@@ -141,7 +145,7 @@ export default function ReceptionistPatientsScreen() {
     <View style={styles.container}>
       <Header title="Patient Directory" subtitle="Patient Registration & Records" showLogout={true} />
 
-      <View style={styles.topActionContainer}>
+      <View style={[styles.topActionContainer, { paddingHorizontal: horizontalPadding, maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center' }]}>
         <Button
           title="+ Register Walk-In Patient"
           onPress={() => setShowRegModal(true)}
@@ -150,7 +154,7 @@ export default function ReceptionistPatientsScreen() {
           style={{ width: '100%', marginBottom: 10 }}
         />
         <Input
-          placeholder="🔍 Search patients by name or email..."
+          placeholder="Search patients by name or email..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           containerStyle={{ marginBottom: 0 }}
@@ -158,14 +162,25 @@ export default function ReceptionistPatientsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {filteredPatients.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>👥</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="users" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Patients Found</Text>
             <Text style={styles.emptyDesc}>No patient records match your search criteria.</Text>
           </Card>
@@ -173,7 +188,7 @@ export default function ReceptionistPatientsScreen() {
           filteredPatients.map((p) => (
             <TouchableOpacity
               key={p._id}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               onPress={() => handleViewPatientDetails(p)}
             >
               <Card style={styles.patientCard}>
@@ -183,11 +198,16 @@ export default function ReceptionistPatientsScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.patientName}>{p.full_name}</Text>
-                    <Text style={styles.patientSub}>
-                      {p.age ? `${p.age} yrs` : 'Age N/A'} • {p.gender || 'N/A'} • 📞 {p.phone || 'No Phone'}
-                    </Text>
+                    <View style={styles.patientSubRow}>
+                      <Text style={styles.patientSub}>
+                        {p.age ? `${p.age} yrs` : 'Age N/A'} • {p.gender || 'N/A'} • {p.phone || 'No Phone'}
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.viewLink}>View →</Text>
+                  <View style={styles.viewBadge}>
+                    <Text style={styles.viewLink}>View</Text>
+                    <Icon name="chevron-right" size={12} color={Colors.primary} />
+                  </View>
                 </View>
               </Card>
             </TouchableOpacity>
@@ -200,7 +220,7 @@ export default function ReceptionistPatientsScreen() {
         <Modal
           visible={!!selectedPatient}
           transparent
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setSelectedPatient(null)}
         >
           <View style={styles.modalOverlay}>
@@ -208,16 +228,22 @@ export default function ReceptionistPatientsScreen() {
               <View style={styles.modalHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modalTitle}>{selectedPatient.full_name}</Text>
-                  <Text style={styles.modalSub}>Patient File #${selectedPatient._id.slice(-6)}</Text>
+                  <Text style={styles.modalSub}>Patient File #{selectedPatient._id.slice(-6)}</Text>
                 </View>
-                <TouchableOpacity onPress={() => setSelectedPatient(null)}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                <TouchableOpacity
+                  onPress={() => setSelectedPatient(null)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="close" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={{ maxHeight: 420 }}>
                 <Card style={styles.infoCard}>
-                  <Text style={styles.cardTitle}>📋 Operational Contact Data</Text>
+                  <View style={styles.infoTitleRow}>
+                    <Icon name="document" size={14} color={Colors.primary} />
+                    <Text style={styles.cardTitle}>Operational Contact Data</Text>
+                  </View>
                   <Text style={styles.infoText}>Email: {selectedPatient.email}</Text>
                   <Text style={styles.infoText}>Phone: {selectedPatient.phone || 'N/A'}</Text>
                   <Text style={styles.infoText}>Address: {selectedPatient.address || 'N/A'}</Text>
@@ -225,7 +251,10 @@ export default function ReceptionistPatientsScreen() {
                 </Card>
 
                 <Card style={styles.infoCard}>
-                  <Text style={styles.cardTitle}>📅 Appointments History ({patientAppts.length})</Text>
+                  <View style={styles.infoTitleRow}>
+                    <Icon name="calendar" size={14} color={Colors.primary} />
+                    <Text style={styles.cardTitle}>Appointments History ({patientAppts.length})</Text>
+                  </View>
                   {infoLoading ? (
                     <Text style={styles.emptyText}>Loading appointments...</Text>
                   ) : patientAppts.length === 0 ? (
@@ -234,7 +263,7 @@ export default function ReceptionistPatientsScreen() {
                     patientAppts.map((appt) => (
                       <View key={appt._id} style={styles.apptRow}>
                         <Text style={styles.apptText}>
-                          📅 {new Date(appt.appointment_date).toLocaleDateString()} at {appt.appointment_time} — {appt.treatment} ({appt.status})
+                          {new Date(appt.appointment_date).toLocaleDateString()} at {appt.appointment_time} — {appt.treatment} ({appt.status})
                         </Text>
                         <Text style={styles.apptSub}>
                           Doctor: {(appt.doctorId && typeof appt.doctorId === 'object') ? appt.doctorId.full_name : 'N/A'} • Therapist: {(appt.therapistId && typeof appt.therapistId === 'object') ? appt.therapistId.full_name : 'N/A'}
@@ -253,15 +282,18 @@ export default function ReceptionistPatientsScreen() {
       <Modal
         visible={showRegModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowRegModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Register Walk-In Patient</Text>
-              <TouchableOpacity onPress={() => setShowRegModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <TouchableOpacity
+                onPress={() => setShowRegModal(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Icon name="close" size={20} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -342,133 +374,172 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   topActionContainer: {
-    paddingHorizontal: 16,
     paddingTop: 12,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 8,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   patientCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 4,
+    padding: 14,
   },
   patientHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarMini: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: Colors.primary + '15',
+    borderWidth: 1,
+    borderColor: Colors.primary + '25',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   avatarText: {
-    color: Colors.white,
-    fontWeight: '700',
+    color: Colors.primary,
+    fontWeight: '800',
     fontSize: 16,
   },
   patientName: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
-  patientSub: {
-    fontSize: 12,
-    color: Colors.textSecondary,
+  patientSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 2,
   },
+  patientSub: {
+    ...Typography.caption,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+  },
+  viewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Colors.primary + '10',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
   viewLink: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.primary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(17, 35, 24, 0.45)',
     justifyContent: 'center',
     padding: 16,
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    ...Typography.h3,
+    fontSize: 17,
     color: Colors.text,
   },
   modalSub: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11.5,
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  closeBtn: {
-    fontSize: 20,
-    color: Colors.textMuted,
-    padding: 4,
-  },
   infoCard: {
     marginVertical: 4,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    padding: 12,
   },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
+  infoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 8,
   },
+  cardTitle: {
+    ...Typography.h3,
+    fontSize: 14,
+    color: Colors.text,
+  },
   infoText: {
-    fontSize: 13,
+    ...Typography.body,
+    fontSize: 12.5,
     color: Colors.text,
     marginBottom: 4,
   },
   emptyText: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textMuted,
     fontStyle: 'italic',
   },
   apptRow: {
     marginBottom: 6,
-    paddingBottom: 4,
+    paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.border + '70',
   },
   apptText: {
+    ...Typography.body,
     fontSize: 12,
-    fontWeight: '600',
     color: Colors.text,
   },
   apptSub: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

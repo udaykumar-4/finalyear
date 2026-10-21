@@ -9,16 +9,19 @@ import {
   Animated,
 } from 'react-native';
 import Colors from '../constants/Colors';
+import Typography from '../constants/Typography';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost';
   size?: 'small' | 'medium' | 'large';
   loading?: boolean;
   disabled?: boolean;
+  icon?: React.ReactNode;
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -28,15 +31,17 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'medium',
   loading = false,
   disabled = false,
+  icon,
   style,
   textStyle,
+  accessibilityLabel,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Animated.timing(scaleAnim, {
-      toValue: 0.96,
-      duration: 100,
+      toValue: 0.97,
+      duration: 80,
       useNativeDriver: true,
     }).start();
   };
@@ -44,7 +49,7 @@ export const Button: React.FC<ButtonProps> = ({
   const handlePressOut = () => {
     Animated.timing(scaleAnim, {
       toValue: 1,
-      duration: 120,
+      duration: 100,
       useNativeDriver: true,
     }).start();
   };
@@ -57,6 +62,8 @@ export const Button: React.FC<ButtonProps> = ({
         return styles.dangerBtn;
       case 'outline':
         return styles.outlineBtn;
+      case 'ghost':
+        return styles.ghostBtn;
       case 'primary':
       default:
         return styles.primaryBtn;
@@ -67,6 +74,8 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'outline':
         return styles.outlineText;
+      case 'ghost':
+        return styles.ghostText;
       case 'primary':
       case 'secondary':
       case 'danger':
@@ -94,7 +103,7 @@ export const Button: React.FC<ButtonProps> = ({
           styles.baseBtn,
           getVariantStyle(),
           getSizeStyle(),
-          disabled || loading ? styles.disabledBtn : null,
+          (disabled || loading) && styles.disabledBtn,
           style,
         ]}
         onPress={onPress}
@@ -102,11 +111,19 @@ export const Button: React.FC<ButtonProps> = ({
         onPressOut={handlePressOut}
         activeOpacity={0.85}
         disabled={disabled || loading}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || title}
       >
         {loading ? (
-          <ActivityIndicator color={variant === 'outline' ? Colors.primary : Colors.white} size="small" />
+          <ActivityIndicator
+            color={variant === 'outline' || variant === 'ghost' ? Colors.primary : '#FFFFFF'}
+            size="small"
+          />
         ) : (
-          <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+          <>
+            {icon ? <Animated.View style={styles.iconContainer}>{icon}</Animated.View> : null}
+            <Text style={[styles.label, getTextStyle(), textStyle]}>{title}</Text>
+          </>
         )}
       </TouchableOpacity>
     </Animated.View>
@@ -115,59 +132,81 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   baseBtn: {
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: Colors.shadowElevated,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    minHeight: 44, // WCAG Touch Target standard
   },
   primaryBtn: {
     backgroundColor: Colors.primary,
+    borderWidth: 1,
+    borderColor: Colors.primaryDark,
+    shadowColor: Colors.shadowElevated,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   secondaryBtn: {
     backgroundColor: Colors.secondary,
+    borderWidth: 1,
+    borderColor: Colors.secondaryDark,
+    shadowColor: Colors.shadowElevated,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 2,
   },
   dangerBtn: {
     backgroundColor: Colors.error,
+    borderWidth: 1,
+    borderColor: '#B91C1C',
   },
   outlineBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: Colors.primary,
-    shadowOpacity: 0.04,
+  },
+  ghostBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   smallBtn: {
-    paddingVertical: 9,
-    paddingHorizontal: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    minHeight: 38,
   },
   mediumBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    minHeight: 46,
   },
   largeBtn: {
-    paddingVertical: 18,
-    paddingHorizontal: 26,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    minHeight: 52,
+  },
+  iconContainer: {
+    marginRight: 8,
+  },
+  label: {
+    ...Typography.button,
   },
   btnText: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.2,
   },
   outlineText: {
     color: Colors.primary,
     fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.2,
+  },
+  ghostText: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
   disabledBtn: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
 });
 

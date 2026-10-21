@@ -13,14 +13,18 @@ import { useAuth } from '../../context/AuthContext';
 import appointmentService from '../../services/appointmentService';
 import { Appointment } from '../../types/appointment';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import StatCard from '../../components/StatCard';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function ReceptionistPaymentsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -98,10 +102,19 @@ export default function ReceptionistPaymentsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Billing & Payments" subtitle="Collection & Receipts" showLogout={true} />
+      <Header title="Billing & Payments" subtitle="Collection & Receipts Desk" showLogout={true} />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
@@ -110,14 +123,14 @@ export default function ReceptionistPaymentsScreen() {
         <View style={styles.statsGrid}>
           <StatCard
             title="Collected Revenue"
-            value={`₹${totalPaidRevenue}`}
-            icon="💰"
+            value={`₹${totalPaidRevenue.toLocaleString('en-IN')}`}
+            icon="card"
             color={Colors.success}
           />
           <StatCard
             title="Pending Billing"
-            value={`₹${totalPendingBilling}`}
-            icon="⏳"
+            value={`₹${totalPendingBilling.toLocaleString('en-IN')}`}
+            icon="clock"
             color={Colors.warning}
           />
         </View>
@@ -127,6 +140,7 @@ export default function ReceptionistPaymentsScreen() {
           <TouchableOpacity
             style={[styles.tabItem, filterTab === 'unpaid' && styles.activeTabItem]}
             onPress={() => setFilterTab('unpaid')}
+            activeOpacity={0.8}
           >
             <Text style={[styles.tabText, filterTab === 'unpaid' && styles.activeTabText]}>
               Unpaid ({unpaidAppointments.length})
@@ -136,6 +150,7 @@ export default function ReceptionistPaymentsScreen() {
           <TouchableOpacity
             style={[styles.tabItem, filterTab === 'paid' && styles.activeTabItem]}
             onPress={() => setFilterTab('paid')}
+            activeOpacity={0.8}
           >
             <Text style={[styles.tabText, filterTab === 'paid' && styles.activeTabText]}>
               Paid ({paidAppointments.length})
@@ -145,6 +160,7 @@ export default function ReceptionistPaymentsScreen() {
           <TouchableOpacity
             style={[styles.tabItem, filterTab === 'all' && styles.activeTabItem]}
             onPress={() => setFilterTab('all')}
+            activeOpacity={0.8}
           >
             <Text style={[styles.tabText, filterTab === 'all' && styles.activeTabText]}>
               All ({appointments.filter(a => a.status !== 'cancelled' || a.isPaid).length})
@@ -154,7 +170,9 @@ export default function ReceptionistPaymentsScreen() {
 
         {filteredItems.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>💳</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="card" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Billing Records</Text>
             <Text style={styles.emptyDesc}>No appointment bills match the selected filter.</Text>
           </Card>
@@ -162,26 +180,51 @@ export default function ReceptionistPaymentsScreen() {
           filteredItems.map((item) => (
             <Card key={item._id} style={styles.billCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.patientName}>
-                  👤 {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
-                </Text>
-                <Text style={[styles.costBadge, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
-                  ₹{item.cost || 1500}
+                <View style={styles.patientRow}>
+                  <View style={styles.patientAvatar}>
+                    <Icon name="user" size={14} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.patientName}>
+                    {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
+                  </Text>
+                </View>
+                <View style={[styles.costBadgeContainer, { backgroundColor: item.isPaid ? Colors.success + '15' : Colors.warning + '18' }]}>
+                  <Text style={[styles.costBadge, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
+                    ₹{item.cost || 1500}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="treatment" size={12} color={Colors.primary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Treatment: </Text>
+                  {item.treatment}
                 </Text>
               </View>
 
-              <Text style={styles.itemDetail}>🌿 Treatment: {item.treatment}</Text>
-              <Text style={styles.itemDetail}>
-                📅 Date & Time: {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
-              </Text>
-              <Text style={styles.itemDetail}>
-                Doctor: {(item.doctorId && typeof item.doctorId === 'object') ? item.doctorId.full_name : 'N/A'}
-              </Text>
+              <View style={styles.detailRow}>
+                <Icon name="calendar" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Schedule: </Text>
+                  {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="doctor" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Doctor: </Text>
+                  {(item.doctorId && typeof item.doctorId === 'object') ? item.doctorId.full_name : 'N/A'}
+                </Text>
+              </View>
 
               <View style={styles.cardFooter}>
-                <Text style={[styles.statusText, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
-                  STATUS: {item.isPaid ? 'PAID ✓' : (item.status === 'cancelled' ? 'CANCELLED (NO FEE DUE)' : 'UNPAID PENDING')}
-                </Text>
+                <View style={[styles.statusChip, { backgroundColor: item.isPaid ? Colors.success + '15' : Colors.warning + '18' }]}>
+                  <Text style={[styles.statusText, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
+                    {item.isPaid ? 'PAID' : (item.status === 'cancelled' ? 'CANCELLED' : 'UNPAID PENDING')}
+                  </Text>
+                </View>
                 {item.status !== 'cancelled' && (
                   <Button
                     title={item.isPaid ? 'Mark Unpaid' : 'Settle Payment'}
@@ -189,6 +232,7 @@ export default function ReceptionistPaymentsScreen() {
                     loading={updatingId === item._id}
                     size="small"
                     variant={item.isPaid ? 'outline' : 'primary'}
+                    style={{ minWidth: 104 }}
                   />
                 )}
               </View>
@@ -206,98 +250,142 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginBottom: 14,
+    padding: 3,
     borderWidth: 1,
     borderColor: Colors.border,
+    marginVertical: 10,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: Colors.background,
-    marginRight: 4,
+    borderRadius: 9,
   },
   activeTabItem: {
     backgroundColor: Colors.primary,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...Typography.caption,
+    fontSize: 12.5,
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   activeTabText: {
     color: Colors.white,
-    fontWeight: '700',
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   billCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   patientName: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
+  costBadgeContainer: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
   costBadge: {
-    fontSize: 16,
+    ...Typography.metric,
+    fontSize: 14,
     fontWeight: '800',
   },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3,
+  },
   itemDetail: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
+    color: Colors.text,
+  },
+  detailLabel: {
     color: Colors.textSecondary,
-    marginBottom: 3,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
-    paddingTop: 8,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
+  },
+  statusChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
   statusText: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 10.5,
     fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

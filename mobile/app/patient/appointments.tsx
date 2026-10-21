@@ -12,19 +12,21 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import appointmentService from '../../services/appointmentService';
-import userService from '../../services/userService';
 import { Appointment, AppointmentStatus } from '../../types/appointment';
-import { User } from '../../types/user';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
 import BookAppointmentModal from '../../components/BookAppointmentModal';
 import { categorizeAppointmentDate } from '../../utils/appointmentDateUtils';
+import { useResponsive } from '../../constants/Layout';
 
 export default function PatientAppointmentsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -118,9 +120,9 @@ export default function PatientAppointmentsScreen() {
     <View style={styles.container}>
       <Header title="My Appointments" subtitle="Schedule & Booking History" showLogout={true} />
 
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding, maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center' }]}>
         <Button
-          title="+ Book Appointment"
+          title="+ Book Consultation"
           onPress={() => setShowBookModal(true)}
           variant="primary"
           size="medium"
@@ -129,35 +131,48 @@ export default function PatientAppointmentsScreen() {
       </View>
 
       {/* Filter Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterRowContainer}
-        contentContainerStyle={styles.filterRowContent}
-      >
-        {['all', 'today', 'upcoming', 'scheduled', 'completed', 'cancelled'].map((status) => (
-          <TouchableOpacity
-            key={status}
-            style={[styles.filterChip, filterStatus === status && styles.activeFilterChip]}
-            onPress={() => setFilterStatus(status)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.filterChipText, filterStatus === status && styles.activeFilterChipText]}>
-              {status.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={[styles.filterWrapper, { maxWidth: containerMaxWidth, alignSelf: 'center' }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRowContainer}
+          contentContainerStyle={[styles.filterRowContent, { paddingHorizontal: horizontalPadding }]}
+        >
+          {['all', 'today', 'upcoming', 'scheduled', 'completed', 'cancelled'].map((status) => (
+            <TouchableOpacity
+              key={status}
+              style={[styles.filterChip, filterStatus === status && styles.activeFilterChip]}
+              onPress={() => setFilterStatus(status)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterChipText, filterStatus === status && styles.activeFilterChipText]}>
+                {status.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {filteredAppointments.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>📅</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="calendar" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Appointments Found</Text>
             <Text style={styles.emptyDesc}>No appointment records match the selected filter criteria.</Text>
           </Card>
@@ -165,33 +180,49 @@ export default function PatientAppointmentsScreen() {
           filteredAppointments.map((item) => (
             <TouchableOpacity
               key={item._id}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               onPress={() => setSelectedAppt(item)}
             >
               <Card style={styles.apptCard}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.treatmentTitle}>🌿 {item.treatment}</Text>
-                  <Text style={[styles.statusBadge, getStatusStyle(item.status)]}>
-                    {item.status.toUpperCase()}
-                  </Text>
+                  <View style={styles.treatmentRow}>
+                    <View style={styles.treatmentIconBadge}>
+                      <Icon name="treatment" size={14} color={Colors.primary} />
+                    </View>
+                    <Text style={styles.treatmentTitle}>{item.treatment}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, getStatusBadgeStyle(item.status)]}>
+                    <Text style={[styles.statusBadgeText, getStatusTextStyle(item.status)]}>
+                      {item.status.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>📅 Date & Time:</Text>
+                  <View style={styles.infoLabelGroup}>
+                    <Icon name="calendar" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.infoLabel}>Date & Time:</Text>
+                  </View>
                   <Text style={styles.infoValue}>
                     {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>👨‍⚕️ Doctor:</Text>
+                  <View style={styles.infoLabelGroup}>
+                    <Icon name="doctor" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.infoLabel}>Doctor:</Text>
+                  </View>
                   <Text style={styles.infoValue}>
                     {(item.doctorId && typeof item.doctorId === 'object') ? item.doctorId.full_name : 'Assigned Doctor'}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>🧘 Therapist:</Text>
+                  <View style={styles.infoLabelGroup}>
+                    <Icon name="therapist" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.infoLabel}>Therapist:</Text>
+                  </View>
                   <Text style={styles.infoValue}>
                     {(item.therapistId && typeof item.therapistId === 'object') ? item.therapistId.full_name : 'Assigned Therapist'}
                   </Text>
@@ -199,15 +230,18 @@ export default function PatientAppointmentsScreen() {
 
                 <View style={styles.cardFooter}>
                   <Text style={styles.costText}>Cost: ₹{item.cost || 1500}</Text>
-                  <Text style={[styles.paidText, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
-                    {item.isPaid ? '✓ PAID' : (item.status === 'cancelled' ? 'CANCELLED' : 'UNPAID')}
-                  </Text>
+                  <View style={[styles.paidChip, { backgroundColor: item.isPaid ? Colors.success + '15' : Colors.warning + '18' }]}>
+                    <Text style={[styles.paidText, { color: item.isPaid ? Colors.success : (item.status === 'cancelled' ? Colors.textSecondary : Colors.warning) }]}>
+                      {item.isPaid ? 'PAID' : (item.status === 'cancelled' ? 'CANCELLED' : 'UNPAID')}
+                    </Text>
+                  </View>
                 </View>
 
                 {item.status === 'scheduled' && (
                   <TouchableOpacity
                     style={styles.cancelLink}
                     onPress={() => handleCancelAppointment(item._id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
                   >
                     <Text style={styles.cancelLinkText}>Cancel Booking</Text>
                   </TouchableOpacity>
@@ -223,20 +257,23 @@ export default function PatientAppointmentsScreen() {
         <Modal
           visible={!!selectedAppt}
           transparent
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setSelectedAppt(null)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Appointment Details</Text>
-                <TouchableOpacity onPress={() => setSelectedAppt(null)}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                <TouchableOpacity
+                  onPress={() => setSelectedAppt(null)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="close" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={{ maxHeight: 350 }}>
-                <Text style={styles.modalSub}>Treatment: {selectedAppt.treatment}</Text>
+                <Text style={styles.modalSub}>{selectedAppt.treatment}</Text>
                 <Text style={styles.modalDetail}>Status: {selectedAppt.status.toUpperCase()}</Text>
                 <Text style={styles.modalDetail}>
                   Date: {new Date(selectedAppt.appointment_date).toLocaleDateString()}
@@ -282,17 +319,31 @@ export default function PatientAppointmentsScreen() {
   );
 }
 
-const getStatusStyle = (status: AppointmentStatus) => {
+const getStatusBadgeStyle = (status: AppointmentStatus) => {
   switch (status) {
     case 'completed':
-      return { backgroundColor: Colors.successBg, color: Colors.success };
+      return { backgroundColor: Colors.success + '18' };
     case 'cancelled':
-      return { backgroundColor: Colors.errorBg, color: Colors.error };
+      return { backgroundColor: Colors.error + '18' };
     case 'in-progress':
-      return { backgroundColor: Colors.warningBg, color: Colors.warning };
+      return { backgroundColor: Colors.warning + '18' };
     case 'scheduled':
     default:
-      return { backgroundColor: Colors.primary + '20', color: Colors.primary };
+      return { backgroundColor: Colors.primary + '15' };
+  }
+};
+
+const getStatusTextStyle = (status: AppointmentStatus) => {
+  switch (status) {
+    case 'completed':
+      return { color: Colors.success };
+    case 'cancelled':
+      return { color: Colors.error };
+    case 'in-progress':
+      return { color: Colors.warning };
+    case 'scheduled':
+    default:
+      return { color: Colors.primary };
   }
 };
 
@@ -302,41 +353,43 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   topBar: {
-    paddingHorizontal: 16,
     paddingTop: 12,
   },
   bookBtn: {
     width: '100%',
   },
+  filterWrapper: {
+    width: '100%',
+  },
   filterRowContainer: {
     flexGrow: 0,
     maxHeight: 52,
-    marginVertical: 6,
+    marginVertical: 8,
   },
   filterRowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: 8,
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 36,
+    height: 34,
   },
   activeFilterChip: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   filterChipText: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 11,
     fontWeight: '700',
     color: Colors.textSecondary,
     textAlign: 'center',
@@ -345,101 +398,150 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 8,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   apptCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  treatmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  treatmentIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   treatmentTitle: {
-    fontSize: 17,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
   statusBadge: {
-    fontSize: 10,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  statusBadgeText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: 4,
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  infoLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    width: 105,
   },
   infoLabel: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12,
     fontWeight: '600',
     color: Colors.textSecondary,
-    width: 100,
   },
   infoValue: {
-    fontSize: 13,
+    ...Typography.bodyMedium,
+    fontSize: 12.5,
     color: Colors.text,
     flex: 1,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
   },
   costText: {
-    fontSize: 14,
+    ...Typography.caption,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.text,
   },
+  paidChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   paidText: {
-    fontSize: 12,
+    ...Typography.caption,
+    fontSize: 10.5,
     fontWeight: '800',
+    letterSpacing: 0.5,
   },
   cancelLink: {
-    marginTop: 8,
+    marginTop: 10,
     alignSelf: 'flex-end',
+    minHeight: 28,
+    justifyContent: 'center',
   },
   cancelLinkText: {
+    ...Typography.caption,
     color: Colors.error,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(17, 35, 24, 0.4)',
     justifyContent: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -448,23 +550,20 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 17,
     color: Colors.text,
   },
-  closeBtn: {
-    fontSize: 20,
-    color: Colors.textMuted,
-    padding: 4,
-  },
   modalSub: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.primary,
     marginBottom: 8,
   },
   modalDetail: {
-    fontSize: 14,
+    ...Typography.body,
+    fontSize: 13,
     color: Colors.text,
     marginBottom: 6,
   },

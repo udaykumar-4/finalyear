@@ -11,13 +11,17 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
+import { useResponsive } from '../../constants/Layout';
 
 export default function PatientProfileScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading, updateUserInContext, logout } = useAuth();
   const router = useRouter();
 
@@ -103,10 +107,24 @@ export default function PatientProfileScreen() {
     <View style={styles.container}>
       <Header title="My Profile" subtitle="Account & Health Summary" showLogout={true} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
+      >
         {/* Personal Details */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>👤 Personal Details</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="user" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Personal Details</Text>
+          </View>
 
           <Input
             label="Full Name"
@@ -118,7 +136,7 @@ export default function PatientProfileScreen() {
             label="Email Address (Read-only)"
             value={user?.email}
             editable={false}
-            style={{ backgroundColor: Colors.background }}
+            style={{ backgroundColor: Colors.surface }}
           />
 
           <View style={styles.rowGrid}>
@@ -147,6 +165,7 @@ export default function PatientProfileScreen() {
                   key={g}
                   style={[styles.genderChip, gender === g && styles.activeGenderChip]}
                   onPress={() => setGender(g)}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.genderText, gender === g && styles.activeGenderText]}>
                     {g}
@@ -188,7 +207,10 @@ export default function PatientProfileScreen() {
 
         {/* Vital Signs */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>📊 Vital Signs Record</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="heart" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Vital Signs Record</Text>
+          </View>
 
           <View style={styles.rowGrid}>
             <Input
@@ -234,7 +256,10 @@ export default function PatientProfileScreen() {
 
         {/* Account Controls */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>⚙️ Account Session</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Icon name="gear" size={15} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Account Session</Text>
+          </View>
           <Button
             title="Sign Out of Mobile App"
             onPress={logout}
@@ -254,48 +279,59 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 6,
+    padding: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 14,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 15,
     color: Colors.text,
-    marginBottom: 14,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   rowGrid: {
     flexDirection: 'row',
   },
   label: {
-    fontSize: 14,
+    ...Typography.caption,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
     marginBottom: 6,
   },
   genderRow: {
     flexDirection: 'row',
+    gap: 8,
   },
   genderChip: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: Colors.border,
-    marginRight: 6,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   activeGenderChip: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   genderText: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
     fontWeight: '600',
     color: Colors.textSecondary,
   },

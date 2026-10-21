@@ -42,4 +42,31 @@ const prescriptionSchema = new Schema({
   }
 }, { timestamps: true });
 
+prescriptionSchema.index({ patientId: 1, createdAt: -1, status: 1 }, { background: true, name: 'idx_prescriptions_patient_created_status' });
+prescriptionSchema.index({ doctorId: 1 }, { background: true, name: 'idx_prescriptions_doctor' });
+prescriptionSchema.index({ therapistId: 1 }, { background: true, name: 'idx_prescriptions_therapist' });
+
+// Lifecycle hooks for automated cache invalidation
+prescriptionSchema.post('save', function(doc) {
+  try {
+    const cacheService = require('../services/cache/cacheService');
+    cacheService.delPattern('analytics:global*');
+    if (doc.doctorId) cacheService.del(`analytics:doctor:${doc.doctorId}`);
+    if (doc.therapistId) cacheService.del(`analytics:therapist:${doc.therapistId}`);
+    if (doc.patientId) cacheService.del(`analytics:patient:${doc.patientId}`);
+  } catch {}
+});
+
+prescriptionSchema.post(['deleteOne', 'findOneAndDelete'], function(doc) {
+  try {
+    const cacheService = require('../services/cache/cacheService');
+    cacheService.delPattern('analytics:global*');
+    if (doc) {
+      if (doc.doctorId) cacheService.del(`analytics:doctor:${doc.doctorId}`);
+      if (doc.therapistId) cacheService.del(`analytics:therapist:${doc.therapistId}`);
+      if (doc.patientId) cacheService.del(`analytics:patient:${doc.patientId}`);
+    }
+  } catch {}
+});
+
 module.exports = mongoose.model('Prescription', prescriptionSchema);

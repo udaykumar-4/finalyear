@@ -77,6 +77,13 @@ export const DoctorPrescriptionsPage: React.FC<DoctorPrescriptionsPageProps> = (
     loadData();
   }, [user]);
 
+  useEffect(() => {
+    if (defaultPatientId) {
+      setSelectedPatientId(defaultPatientId);
+      setIsModalOpen(true);
+    }
+  }, [defaultPatientId]);
+
   const handleCreatePrescription = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;

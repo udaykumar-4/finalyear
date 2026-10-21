@@ -1,6 +1,18 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (envUrl) return envUrl;
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5000/api';
+    }
+    return `http://${window.location.hostname}:5000/api`;
+  }
+  return 'http://localhost:5000/api';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export const STORAGE_KEYS = {
   userToken: 'ayursutra_user_token',
@@ -55,7 +67,7 @@ apiClient.interceptors.response.use(
         errorMessage = 'Server error. Please try again later.';
       }
     } else if (error.request) {
-      errorMessage = 'Network Error: Cannot connect to server at http://localhost:5000/api. Please ensure backend is running.';
+      errorMessage = `Network Error: Cannot connect to server at ${API_BASE_URL}. Please ensure backend is running.`;
     } else if (error.message) {
       errorMessage = error.message;
     }

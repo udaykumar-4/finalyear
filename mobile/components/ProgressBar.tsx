@@ -15,8 +15,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
   label,
   showPercentage = true,
-  color = Colors.accent,
-  height = 10,
+  color = Colors.accentDark,
+  height = 8,
   style,
 }) => {
   // Normalize progress to 0 - 100
@@ -49,32 +49,34 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginVertical: 6,
+    marginVertical: 5,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   label: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.textSecondary,
+    letterSpacing: -0.1,
   },
   percentage: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
     color: Colors.primary,
+    fontVariant: ['tabular-nums'],
   },
   track: {
-    backgroundColor: Colors.border,
-    borderRadius: 8,
+    backgroundColor: '#E8EFEA',
+    borderRadius: 6,
     overflow: 'hidden',
     width: '100%',
   },
   fill: {
-    borderRadius: 8,
+    borderRadius: 6,
   },
 });
 

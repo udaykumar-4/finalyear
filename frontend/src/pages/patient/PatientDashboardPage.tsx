@@ -19,6 +19,11 @@ import { Prescription } from '../../types/prescription';
 import Card from '../../components/common/Card';
 import StatCard from '../../components/common/StatCard';
 import Button from '../../components/common/Button';
+import { PrakritiDashboardCard } from '../../components/patient/PrakritiDashboardCard';
+import { PrakritiAssessmentModal } from '../../components/patient/PrakritiAssessmentModal';
+import { TreatmentRecommendationDashboardCard } from '../../components/patient/TreatmentRecommendationDashboardCard';
+import { prakritiService } from '../../services/prakritiService';
+import { PrakritiAssessmentRecord } from '../../types/prakriti';
 
 export interface PatientDashboardPageProps {
   onNavigateTab: (tabId: string) => void;
@@ -36,6 +41,9 @@ export const PatientDashboardPage: React.FC<PatientDashboardPageProps> = ({
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [latestPrakriti, setLatestPrakriti] = useState<PrakritiAssessmentRecord | null>(null);
+  const [isPrakritiModalOpen, setIsPrakritiModalOpen] = useState(false);
+  const [prakritiModalMode, setPrakritiModalMode] = useState<'intro' | 'quiz' | 'result' | 'history'>('intro');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,12 +52,14 @@ export const PatientDashboardPage: React.FC<PatientDashboardPageProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const [appts, rx] = await Promise.all([
+      const [appts, rx, prakriti] = await Promise.all([
         appointmentService.getAppointments({ patientId: user._id }),
         prescriptionService.getByPatientId(user._id).catch(() => []),
+        prakritiService.getLatestAssessment().catch(() => null),
       ]);
       setAppointments(appts);
       setPrescriptions(rx);
+      setLatestPrakriti(prakriti);
     } catch (err: any) {
       setError(err.message || 'Failed to load wellness dashboard.');
     } finally {
@@ -103,7 +113,7 @@ export const PatientDashboardPage: React.FC<PatientDashboardPageProps> = ({
               Holistic Health Portal
             </span>
             <span style={{ fontSize: '0.8125rem', color: 'rgba(255, 255, 255, 0.8)' }}>
-              Primary Dosha: {user?.condition || 'Vata-Pitta Balance'}
+              Primary Dosha: {latestPrakriti?.dominantConstitution || user?.condition || 'Vata-Pitta Balance'}
             </span>
           </div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-white)', lineHeight: 1.2 }}>
@@ -119,7 +129,7 @@ export const PatientDashboardPage: React.FC<PatientDashboardPageProps> = ({
             onClick={onOpenRecommendationModal}
             leftIcon={<Sparkles size={16} />}
           >
-            Explore Therapies
+            AI Treatment Recommendations
           </Button>
           <Button
             variant="primary"
@@ -146,6 +156,21 @@ export const PatientDashboardPage: React.FC<PatientDashboardPageProps> = ({
           {error}
         </div>
       )}
+
+      {/* 🌟 ADDITIVE FEATURE: Discover Your Prakriti Assessment Card */}
+      <PrakritiDashboardCard
+        latestAssessment={latestPrakriti}
+        onOpenAssessment={(mode = 'intro') => {
+          setPrakritiModalMode(mode);
+          setIsPrakritiModalOpen(true);
+        }}
+        isLoading={isLoading}
+      />
+
+      {/* 🌟 AI TREATMENT RECOMMENDATION SYSTEM CARD */}
+      <TreatmentRecommendationDashboardCard
+        onOpenRecommendations={onOpenRecommendationModal}
+      />
 
       {/* Highlights */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
@@ -282,6 +307,16 @@ export const PatientDashboardPage: React.FC<PatientDashboardPageProps> = ({
           )}
         </Card>
       </div>
+
+      {/* 🌟 PRAKRITI ASSESSMENT MODAL */}
+      <PrakritiAssessmentModal
+        isOpen={isPrakritiModalOpen}
+        onClose={() => setIsPrakritiModalOpen(false)}
+        initialMode={prakritiModalMode}
+        onAssessmentCompleted={(record) => {
+          setLatestPrakriti(record);
+        }}
+      />
     </div>
   );
 };

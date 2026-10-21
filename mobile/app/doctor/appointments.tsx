@@ -13,14 +13,18 @@ import { useAuth } from '../../context/AuthContext';
 import appointmentService from '../../services/appointmentService';
 import { Appointment, AppointmentStatus } from '../../types/appointment';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
 import { categorizeAppointmentDate } from '../../utils/appointmentDateUtils';
+import { useResponsive } from '../../constants/Layout';
 
 export default function DoctorAppointmentsScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -96,44 +100,60 @@ export default function DoctorAppointmentsScreen() {
       <Header title="Consultation Schedule" subtitle="Appointments & Patient Consultations" showLogout={true} />
 
       {/* Filter Tabs */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, filterTab === 'today' && styles.activeTabItem]}
-          onPress={() => setFilterTab('today')}
-        >
-          <Text style={[styles.tabText, filterTab === 'today' && styles.activeTabText]}>
-            Today
-          </Text>
-        </TouchableOpacity>
+      <View style={[styles.tabBarWrapper, { maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, filterTab === 'today' && styles.activeTabItem]}
+            onPress={() => setFilterTab('today')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filterTab === 'today' && styles.activeTabText]}>
+              Today
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, filterTab === 'upcoming' && styles.activeTabItem]}
-          onPress={() => setFilterTab('upcoming')}
-        >
-          <Text style={[styles.tabText, filterTab === 'upcoming' && styles.activeTabText]}>
-            Upcoming
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, filterTab === 'upcoming' && styles.activeTabItem]}
+            onPress={() => setFilterTab('upcoming')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filterTab === 'upcoming' && styles.activeTabText]}>
+              Upcoming
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, filterTab === 'all' && styles.activeTabItem]}
-          onPress={() => setFilterTab('all')}
-        >
-          <Text style={[styles.tabText, filterTab === 'all' && styles.activeTabText]}>
-            All ({appointments.length})
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, filterTab === 'all' && styles.activeTabItem]}
+            onPress={() => setFilterTab('all')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filterTab === 'all' && styles.activeTabText]}>
+              All ({appointments.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
 
         {filteredAppts.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>📅</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="calendar" size={32} color={Colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Consultations Found</Text>
             <Text style={styles.emptyDesc}>No appointment records match the selected view filter.</Text>
           </Card>
@@ -141,24 +161,54 @@ export default function DoctorAppointmentsScreen() {
           filteredAppts.map((item) => (
             <Card key={item._id} style={styles.apptCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.patientName}>
-                  👤 {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
-                </Text>
-                <Text style={[styles.statusBadge, getStatusStyle(item.status)]}>
-                  {item.status.toUpperCase()}
+                <View style={styles.patientRow}>
+                  <View style={styles.patientAvatar}>
+                    <Icon name="user" size={14} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.patientName}>
+                    {(item.patientId && typeof item.patientId === 'object') ? item.patientId.full_name : 'Patient'}
+                  </Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: getBadgeBg(item.status) }]}>
+                  <Text style={[styles.statusBadgeText, { color: getBadgeColor(item.status) }]}>
+                    {item.status.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="treatment" size={12} color={Colors.primary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Treatment: </Text>
+                  {item.treatment}
                 </Text>
               </View>
 
-              <Text style={styles.itemDetail}>🌿 Treatment: {item.treatment}</Text>
-              <Text style={styles.itemDetail}>
-                📅 Date & Time: {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
-              </Text>
-              <Text style={styles.itemDetail}>
-                Therapist: {(item.therapistId && typeof item.therapistId === 'object') ? item.therapistId.full_name : 'N/A'}
-              </Text>
-              <Text style={styles.itemDetail}>
-                Payment: <Text style={{ fontWeight: '700', color: item.isPaid ? Colors.success : Colors.warning }}>{item.isPaid ? 'PAID (₹' + (item.cost || 1500) + ')' : 'UNPAID'}</Text>
-              </Text>
+              <View style={styles.detailRow}>
+                <Icon name="calendar" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Schedule: </Text>
+                  {new Date(item.appointment_date).toLocaleDateString()} at {item.appointment_time}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="therapist" size={12} color={Colors.textSecondary} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Therapist: </Text>
+                  {(item.therapistId && typeof item.therapistId === 'object') ? item.therapistId.full_name : 'N/A'}
+                </Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon name="card" size={12} color={item.isPaid ? Colors.success : Colors.warning} />
+                <Text style={styles.itemDetail}>
+                  <Text style={styles.detailLabel}>Payment: </Text>
+                  <Text style={{ fontWeight: '700', color: item.isPaid ? Colors.success : Colors.warning }}>
+                    {item.isPaid ? 'PAID (₹' + (item.cost || 1500) + ')' : 'UNPAID'}
+                  </Text>
+                </Text>
+              </View>
 
               {/* Doctor Status Action Buttons */}
               <View style={styles.statusActionRow}>
@@ -206,17 +256,31 @@ export default function DoctorAppointmentsScreen() {
   );
 }
 
-const getStatusStyle = (status: AppointmentStatus) => {
+const getBadgeBg = (status: AppointmentStatus) => {
   switch (status) {
     case 'completed':
-      return { backgroundColor: Colors.successBg, color: Colors.success };
+      return Colors.success + '18';
     case 'cancelled':
-      return { backgroundColor: Colors.errorBg, color: Colors.error };
+      return Colors.error + '18';
     case 'in-progress':
-      return { backgroundColor: Colors.warningBg, color: Colors.warning };
+      return Colors.warning + '18';
     case 'scheduled':
     default:
-      return { backgroundColor: Colors.primary + '20', color: Colors.primary };
+      return Colors.primary + '15';
+  }
+};
+
+const getBadgeColor = (status: AppointmentStatus) => {
+  switch (status) {
+    case 'completed':
+      return Colors.success;
+    case 'cancelled':
+      return Colors.error;
+    case 'in-progress':
+      return Colors.warning;
+    case 'scheduled':
+    default:
+      return Colors.primary;
   }
 };
 
@@ -225,59 +289,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  tabBarWrapper: {
+    paddingTop: 12,
+  },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: Colors.background,
-    marginRight: 6,
+    borderRadius: 9,
   },
   activeTabItem: {
     backgroundColor: Colors.primary,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...Typography.caption,
+    fontSize: 12.5,
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   activeTabText: {
     color: Colors.white,
-    fontWeight: '700',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   apptCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -285,42 +360,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   patientName: {
-    fontSize: 16,
+    ...Typography.bodyMedium,
+    fontSize: 15.5,
     fontWeight: '700',
     color: Colors.text,
   },
   statusBadge: {
-    fontSize: 10,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
+  },
+  statusBadgeText: {
+    ...Typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
   },
   itemDetail: {
-    fontSize: 13,
+    ...Typography.caption,
+    fontSize: 12.5,
+    color: Colors.text,
+  },
+  detailLabel: {
     color: Colors.textSecondary,
-    marginBottom: 3,
   },
   statusActionRow: {
-    marginTop: 10,
+    marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border + '80',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   actionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 6,
+    ...Typography.caption,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+    fontWeight: '600',
   },
   actionBtnGroup: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    gap: 6,
   },
   actionBtn: {
-    marginRight: 8,
-    marginBottom: 6,
+    minWidth: 78,
   },
 });

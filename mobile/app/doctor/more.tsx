@@ -15,14 +15,18 @@ import userService from '../../services/userService';
 import { Feedback } from '../../types/feedback';
 import { BlockedSlot } from '../../types/user';
 import Colors from '../../constants/Colors';
+import Typography from '../../constants/Typography';
 import Header from '../../components/Header';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 import LoadingScreen from '../../components/LoadingScreen';
 import ErrorView from '../../components/ErrorView';
+import { useResponsive } from '../../constants/Layout';
 
 export default function DoctorMoreScreen() {
+  const { bottomContentPadding, horizontalPadding, containerMaxWidth } = useResponsive();
   const { user, isLoading: authLoading, updateUserInContext, logout } = useAuth();
   const router = useRouter();
 
@@ -134,37 +138,51 @@ export default function DoctorMoreScreen() {
       <Header title="Doctor Profile & Settings" subtitle="Account & Clinic Settings" showLogout={true} />
 
       {/* Segmented Control Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, activeSection === 'feedback' && styles.activeTabItem]}
-          onPress={() => setActiveSection('feedback')}
-        >
-          <Text style={[styles.tabText, activeSection === 'feedback' && styles.activeTabText]}>
-            Feedback ({feedbackList.length})
-          </Text>
-        </TouchableOpacity>
+      <View style={[styles.tabBarWrapper, { maxWidth: containerMaxWidth, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tabItem, activeSection === 'feedback' && styles.activeTabItem]}
+            onPress={() => setActiveSection('feedback')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeSection === 'feedback' && styles.activeTabText]}>
+              Feedback ({feedbackList.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeSection === 'slots' && styles.activeTabItem]}
-          onPress={() => setActiveSection('slots')}
-        >
-          <Text style={[styles.tabText, activeSection === 'slots' && styles.activeTabText]}>
-            Availability ({blockedSlots.length})
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, activeSection === 'slots' && styles.activeTabItem]}
+            onPress={() => setActiveSection('slots')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeSection === 'slots' && styles.activeTabText]}>
+              Availability ({blockedSlots.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeSection === 'profile' && styles.activeTabItem]}
-          onPress={() => setActiveSection('profile')}
-        >
-          <Text style={[styles.tabText, activeSection === 'profile' && styles.activeTabText]}>
-            Profile
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabItem, activeSection === 'profile' && styles.activeTabItem]}
+            onPress={() => setActiveSection('profile')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeSection === 'profile' && styles.activeTabText]}>
+              Profile
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: bottomContentPadding,
+            maxWidth: containerMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {error ? <ErrorView message={error} onRetry={fetchData} /> : null}
@@ -172,12 +190,17 @@ export default function DoctorMoreScreen() {
         {activeSection === 'feedback' ? (
           <View>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Patient Reviews & Ratings</Text>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="star" size={15} color={Colors.secondary} />
+                <Text style={styles.sectionTitle}>Patient Reviews & Ratings</Text>
+              </View>
             </View>
 
             {feedbackList.length === 0 ? (
               <Card style={styles.emptyCard}>
-                <Text style={styles.emptyIcon}>⭐</Text>
+                <View style={styles.emptyIconCircle}>
+                  <Icon name="star" size={32} color={Colors.secondary} />
+                </View>
                 <Text style={styles.emptyTitle}>No Feedback Yet</Text>
                 <Text style={styles.emptyDesc}>Patient reviews submitted for your consultations will appear here.</Text>
               </Card>
@@ -185,10 +208,18 @@ export default function DoctorMoreScreen() {
               feedbackList.map((fb) => (
                 <Card key={fb._id} style={styles.fbCard}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.patientName}>
-                      👤 {(fb.patientId && typeof fb.patientId === 'object') ? fb.patientId.full_name : 'Patient'}
-                    </Text>
-                    <Text style={styles.ratingBadge}>★ {fb.doctorRating || fb.overallRating} / 5</Text>
+                    <View style={styles.patientRow}>
+                      <View style={styles.patientAvatar}>
+                        <Icon name="user" size={13} color={Colors.primary} />
+                      </View>
+                      <Text style={styles.patientName}>
+                        {(fb.patientId && typeof fb.patientId === 'object') ? fb.patientId.full_name : 'Patient'}
+                      </Text>
+                    </View>
+                    <View style={styles.ratingBadge}>
+                      <Icon name="star" size={12} color={Colors.secondary} />
+                      <Text style={styles.ratingBadgeText}>{fb.doctorRating || fb.overallRating} / 5</Text>
+                    </View>
                   </View>
 
                   {fb.doctorFeedback ? (
@@ -209,7 +240,10 @@ export default function DoctorMoreScreen() {
         ) : activeSection === 'slots' ? (
           <View>
             <Card style={styles.slotCard}>
-              <Text style={styles.cardTitle}>🚫 Block Unavailable Time Slot</Text>
+              <View style={styles.cardTitleRow}>
+                <Icon name="clock" size={15} color={Colors.warning} />
+                <Text style={styles.cardTitle}>Block Unavailable Time Slot</Text>
+              </View>
               <Text style={styles.cardSub}>Prevent patients from booking consultations during these hours.</Text>
 
               <Input
@@ -236,7 +270,10 @@ export default function DoctorMoreScreen() {
             </Card>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Your Blocked Slots ({blockedSlots.length})</Text>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="calendar" size={15} color={Colors.primary} />
+                <Text style={styles.sectionTitle}>Your Blocked Slots ({blockedSlots.length})</Text>
+              </View>
             </View>
 
             {blockedSlots.length === 0 ? (
@@ -247,9 +284,12 @@ export default function DoctorMoreScreen() {
               blockedSlots.map((slot) => (
                 <Card key={slot._id || slot.time} style={styles.slotItemCard}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.slotText}>
-                      📅 {new Date(slot.date).toLocaleDateString()} at {slot.time}
-                    </Text>
+                    <View style={styles.slotTimeRow}>
+                      <Icon name="clock" size={13} color={Colors.warning} />
+                      <Text style={styles.slotText}>
+                        {new Date(slot.date).toLocaleDateString()} at {slot.time}
+                      </Text>
+                    </View>
                     {slot._id && (
                       <Button
                         title="Unblock"
@@ -267,13 +307,16 @@ export default function DoctorMoreScreen() {
         ) : (
           <View>
             <Card style={styles.profileCard}>
-              <Text style={styles.cardTitle}>👨‍⚕️ Doctor Profile Settings</Text>
+              <View style={styles.cardTitleRow}>
+                <Icon name="doctor" size={15} color={Colors.primary} />
+                <Text style={styles.cardTitle}>Doctor Profile Settings</Text>
+              </View>
 
               <Input
                 label="Full Name (Read-only)"
                 value={user?.full_name}
                 editable={false}
-                style={{ backgroundColor: Colors.background }}
+                style={{ backgroundColor: Colors.surface }}
               />
 
               <Input
@@ -300,7 +343,10 @@ export default function DoctorMoreScreen() {
             </Card>
 
             <Card style={styles.profileCard}>
-              <Text style={styles.cardTitle}>⚙️ Account Session</Text>
+              <View style={styles.cardTitleRow}>
+                <Icon name="gear" size={15} color={Colors.primary} />
+                <Text style={styles.cardTitle}>Account Session</Text>
+              </View>
               <Button
                 title="Sign Out of Doctor Mobile Portal"
                 onPress={logout}
@@ -320,129 +366,193 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  tabBarWrapper: {
+    paddingTop: 12,
+  },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: Colors.background,
-    marginRight: 6,
+    borderRadius: 9,
   },
   activeTabItem: {
     backgroundColor: Colors.primary,
   },
   tabText: {
+    ...Typography.caption,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textSecondary,
   },
   activeTabText: {
     color: Colors.white,
-    fontWeight: '700',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingTop: 10,
   },
   sectionHeader: {
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 8,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...Typography.h3,
+    fontSize: 15,
     color: Colors.text,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 24,
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: Colors.secondary + '18',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
+    ...Typography.h3,
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
   },
   emptyDesc: {
+    ...Typography.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
   fbCard: {
-    backgroundColor: '#fffbe6',
-    borderColor: '#ffe58f',
-    marginVertical: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 5,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  patientAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   patientName: {
-    fontSize: 15,
+    ...Typography.bodyMedium,
+    fontSize: 14.5,
     fontWeight: '700',
     color: Colors.text,
   },
   ratingBadge: {
-    fontSize: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.secondary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  ratingBadgeText: {
+    ...Typography.caption,
+    fontSize: 11,
     fontWeight: '800',
-    color: Colors.warning,
+    color: Colors.secondary,
   },
   fbText: {
-    fontSize: 13,
+    ...Typography.body,
+    fontSize: 12.5,
     color: Colors.text,
     fontStyle: 'italic',
-    marginBottom: 4,
+    lineHeight: 18,
   },
   dateText: {
+    ...Typography.caption,
     fontSize: 11,
     color: Colors.textMuted,
+    marginTop: 6,
   },
   slotCard: {
-    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    padding: 14,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.text,
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     marginBottom: 4,
   },
-  cardSub: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 14,
+  cardTitle: {
+    ...Typography.h3,
+    fontSize: 15,
+    color: Colors.text,
   },
-  subCard: {
+  cardSub: {
+    ...Typography.caption,
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+    marginBottom: 10,
+  },
+  slotItemCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    marginVertical: 4,
     padding: 12,
   },
+  slotTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  slotText: {
+    ...Typography.bodyMedium,
+    fontSize: 13,
+    color: Colors.text,
+  },
+  subCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+  },
   emptyText: {
+    ...Typography.caption,
     fontSize: 13,
     color: Colors.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  slotItemCard: {
-    marginVertical: 4,
-  },
-  slotText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-  },
   profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
     marginVertical: 6,
+    padding: 14,
   },
 });
